@@ -1,0 +1,90 @@
+name: GiveGetGo CI Workflow
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client # Set the working directory to your React Native project directory
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14' # Replace with your Node.js version
+
+  - name: 🔧 Install npm@latest
+      run: npm i -g npm@latest
+
+    - name: Install npm dependencies
+      run: npm install
+
+    - name: Install Expo CLI
+      run: npm install -g expo-cli
+
+    - name: Running tests for our app...
+      run: npm test
+
+    - name: Linting errors for our app...
+      run: npm run lint
+
+    - name: Build Expo project...
+      run: expo build
+
+  client_web:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14' 
+
+    - name: 🔧 Install npm@latest
+      run: npm i -g npm@latest
+
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Running tests for our website...
+      run: npm test
+
+    - name: Linting errors for out website...
+      run: npm run lint
+
+    - name: Trying to build the website...
+      run: npm run build
+
+  server:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up the latest stable Go version
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.20'
+
+    - name: Install dependencies
+      run: go get -v ./...
+
+    - name: Run tests
+      run: go test ./... -v
+
+    - name: Install golangci-lint
+    run: |
+      curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.31.0
+
+    - name: Run golangci-lint
+      run: golangci-lint run ./...
+
+    - name: Build the Go application
+      run: go build -v ./...
