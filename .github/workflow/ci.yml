@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: client # Set the working directory to your React Native project directory
+        working-directory: client
     steps:
     - uses: actions/checkout@v2
 
@@ -20,7 +20,7 @@ jobs:
       with:
         node-version: '14' # Replace with your Node.js version
 
-  - name: 🔧 Install npm@latest
+    - name: 🔧 Install npm@latest
       run: npm i -g npm@latest
 
     - name: Install npm dependencies
@@ -40,6 +40,9 @@ jobs:
 
   client_web:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client_web
     steps:
     - uses: actions/checkout@v2
     
@@ -57,7 +60,7 @@ jobs:
     - name: Running tests for our website...
       run: npm test
 
-    - name: Linting errors for out website...
+    - name: Linting errors for our website...
       run: npm run lint
 
     - name: Trying to build the website...
@@ -65,6 +68,9 @@ jobs:
 
   server:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
     steps:
     - uses: actions/checkout@v2
 
@@ -80,8 +86,8 @@ jobs:
       run: go test ./... -v
 
     - name: Install golangci-lint
-    run: |
-      curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.31.0
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.31.0
 
     - name: Run golangci-lint
       run: golangci-lint run ./...
