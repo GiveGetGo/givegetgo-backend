@@ -1,0 +1,6 @@
+# .env files
+server/.env.server
+.env
+
+# test db
+test.db
