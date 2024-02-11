@@ -29,11 +29,11 @@ jobs:
     - name: Install Expo CLI
       run: npm install -g expo-cli
 
-    - name: Running tests for our app...
-      run: npm test
-
     - name: Linting errors for our app...
       run: npm run lint
+
+    - name: Running tests for our app...
+      run: npm test
 
     - name: Build Expo project...
       run: expo build
@@ -82,15 +82,15 @@ jobs:
     - name: Install dependencies
       run: go get -v ./...
 
-    - name: Run tests
-      run: go test ./... -v
-
     - name: Install golangci-lint
       run: |
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.31.0
 
     - name: Run golangci-lint
       run: golangci-lint run ./...
+
+    - name: Running tests for our server...
+      run: go test -v ./...
 
     - name: Build the Go application
       run: go build -v ./...

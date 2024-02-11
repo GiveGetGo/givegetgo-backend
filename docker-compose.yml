@@ -1,5 +1,18 @@
-version: '3'
+version: '3.8'
 services:
+  server: 
+    build:
+      context: ./server
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./server/.env.server
+    restart: unless-stopped
+    networks:
+      - givegetgo-network
+    depends_on:
+      - postgres
+
   postgres:
     image: postgres
     container_name: postgres

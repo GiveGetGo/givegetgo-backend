@@ -5,11 +5,11 @@ import (
 	"os"
 	"server/db"
 
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	// load the .env file
 	err := godotenv.Load(".env.server")
 	if err != nil {
 		log.Fatalf("Error loading .env.server file: %v", err)
@@ -24,5 +24,10 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	//
+	// set up the router and v1 routes
+	r := gin.Default()
+	v1 := r.Group("/v1")
+
+	// start the server
+	r.Run(":8080")
 }
