@@ -1,6 +1,7 @@
+# Node modules
+client/node_modules
+client_web/node_modules
+
 # .env files
 server/.env.server
 .env
-
-# test db
-test.db
