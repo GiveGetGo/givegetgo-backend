@@ -26,7 +26,7 @@ func main() {
 
 	// set up the router and v1 routes
 	r := gin.Default()
-	v1 := r.Group("/v1")
+	// v1 := r.Group("/v1")
 
 	// start the server
 	r.Run(":8080")
