@@ -6,20 +6,34 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"server/db"
 	"server/schema"
+	"strings"
 	"time"
 
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
-type UserUtils struct {
-	DB *gorm.DB
+// IUserUtils is the interface for the user utils for mocking
+type IUserUtils interface {
+	GenerateRegisterVerificationCode(userID uint) (string, error)
+	SendRegisterVerificationCode(user schema.User, code string) error
+	GetUserByEmail(email string) (schema.User, error)
+	CreateUser(username, email, hashedPassword string) (schema.User, error)
+	ValidatePassword(password string) error
+	HashPassword(password string) (string, error)
 }
 
-func NewUserUtils(db *gorm.DB) *UserUtils {
+type UserUtils struct {
+	DB db.Database
+}
+
+// Ensure UserUtils implements IUserUtils
+var _ IUserUtils = (*UserUtils)(nil)
+
+func NewUserUtils(db db.Database) *UserUtils {
 	return &UserUtils{DB: db}
 }
 
@@ -104,8 +118,54 @@ func (u *UserUtils) CreateUser(username, email, hashedPassword string) (schema.U
 	return user, nil
 }
 
+// ValidatePassword checks if a password is valid (not empty, and at least 8 characters, includes a number, and includes a special character)
+func (u *UserUtils) ValidatePassword(password string) error {
+	// check if the password is at least 8 characters
+	if len(password) < 8 {
+		return errors.New("password is less than 8 characters")
+	}
+
+	// check if the password includes a number
+	hasNumber := false
+	hasCapitalLetter := false
+	for _, char := range password {
+		if char >= '0' && char <= '9' {
+			hasNumber = true
+		}
+		if char >= 'A' && char <= 'Z' {
+			hasCapitalLetter = true
+		}
+
+		if hasNumber && hasCapitalLetter {
+			break
+		}
+	}
+
+	if !hasNumber {
+		return errors.New("password does not include a number")
+	}
+	if !hasCapitalLetter {
+		return errors.New("password does not include a capital letter")
+	}
+
+	// check if the password includes a special character (one of ?!$%^&*_+-=<>?)
+	hasSpecialCharacter := false
+	specialCharacters := "?!$%^&*_+-=<>?"
+	for _, char := range password {
+		if strings.ContainsRune(specialCharacters, char) {
+			hasSpecialCharacter = true
+			break
+		}
+	}
+	if !hasSpecialCharacter {
+		return errors.New("password does not include a special character")
+	}
+
+	return nil
+}
+
 // HashPassword hashes a password using bcrypt
-func HashPassword(password string) (string, error) {
+func (u *UserUtils) HashPassword(password string) (string, error) {
 	// generate a hashed password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {

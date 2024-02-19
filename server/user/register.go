@@ -12,10 +12,10 @@ import (
 )
 
 // userRegisterRequest is the request body for the user registration endpoint
-type userRegisterRequest struct {
-	UserName string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+type UserRegisterRequest struct {
+	UserName string `json:"username" binding:"required"`
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 // UserRegisterResponse is the response body for the user registration endpoint
@@ -26,10 +26,10 @@ type UserRegisterResponse struct {
 }
 
 // UserRegisterHandler is the handler for the user registration endpoint
-func UserRegisterHandler(userUtils *utils.UserUtils) gin.HandlerFunc {
+func UserRegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Parse the request body
-		var req userRegisterRequest
+		var req UserRegisterRequest
 		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, GeneralErrorResponse{
 				Code:    "40001",
@@ -69,8 +69,18 @@ func UserRegisterHandler(userUtils *utils.UserUtils) gin.HandlerFunc {
 			return
 		}
 
+		// Check if the password is valid
+		err = userUtils.ValidatePassword(req.Password)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, GeneralErrorResponse{
+				Code:    "40004",
+				Message: "Invalid password",
+			})
+			return
+		}
+
 		// hash the password
-		hashedPassword, err := utils.HashPassword(req.Password)
+		hashedPassword, err := userUtils.HashPassword(req.Password)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, GeneralErrorResponse{
 				Code:    "50002",
