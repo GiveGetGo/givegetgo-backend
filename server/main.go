@@ -4,6 +4,9 @@ import (
 	"log"
 	"os"
 	"server/db"
+	"server/middleware"
+	"server/user"
+	"server/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -19,14 +22,18 @@ func main() {
 	dburl := os.Getenv("DATABASE_URL")
 
 	// Set up database connection
-	_, err = db.ConnectPostgresDB(dburl)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
+	DB := db.ConnectPostgresDB(dburl)
+	db.AutoMigratePostgresDB(DB)
+	userUtils := utils.NewUserUtils(DB)
+	rateLimiter := middleware.SetupRateLimiter()
 
 	// set up the router and v1 routes
 	r := gin.Default()
 	v1 := r.Group("/v1")
+	v1.Use(rateLimiter)
+
+	// routes
+	v1.POST("/user/register", user.UserRegisterHandler(userUtils))
 
 	// start the server
 	r.Run(":8080")
