@@ -2,11 +2,21 @@ package db
 
 import (
 	"log"
-	"server/schema"
+	"verification_server/schema"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
+
+type Database interface {
+	AutoMigrate(models ...interface{}) error
+	Create(value interface{}) *gorm.DB
+	Where(query interface{}, args ...interface{}) *gorm.DB
+	First(dest interface{}, conds ...interface{}) *gorm.DB
+}
+
+// Ensure that *gorm.DB satisfies the Database interface
+var _ Database = (*gorm.DB)(nil)
 
 // ConnectPostgresDB initializes and returns a GORM database connection
 func ConnectPostgresDB(dburl string) *gorm.DB {
@@ -24,7 +34,7 @@ func ConnectPostgresDB(dburl string) *gorm.DB {
 // AutoMigratePostgresDB migrates the database schema
 func AutoMigratePostgresDB(db *gorm.DB) error {
 	// Migrate the schema
-	err := db.AutoMigrate(&schema.User{}, &schema.RegisterEmailVerification{})
+	err := db.AutoMigrate(&schema.RegisterEmailVerification{})
 	if err != nil {
 		log.Fatalf("Error migrating PostgreSQL schema: %v", err)
 		return err

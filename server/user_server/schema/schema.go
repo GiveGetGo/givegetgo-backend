@@ -9,6 +9,7 @@ type User struct {
 	HashedPassword  string
 	ProfileInfo     string
 	ReputationScore int
+	EmailVerified   bool
 	DateJoined      time.Time
 	LastActiveDate  time.Time
 }
