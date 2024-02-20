@@ -2,9 +2,9 @@ name: GiveGetGo CI Workflow
 
 on:
   push:
-    branches: [ main, development ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, development ]
+    branches: [ main ]
 
 jobs:
   client:
@@ -18,7 +18,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v2
       with:
-        node-version: 'lts/*'
+        node-version: '14' # Replace with your Node.js version
 
     - name: 🔧 Install npm@latest
       run: npm i -g npm@latest
@@ -32,8 +32,8 @@ jobs:
     - name: Linting errors for our app...
       run: npm run lint
 
-    # - name: Running tests for our app...
-    #   run: npm test
+    - name: Running tests for our app...
+      run: npm test
 
     - name: Build Expo project...
       run: expo build
@@ -49,7 +49,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v2
       with:
-        node-version: 'lts/*'
+        node-version: '14' 
 
     - name: 🔧 Install npm@latest
       run: npm i -g npm@latest
@@ -57,8 +57,8 @@ jobs:
     - name: Install dependencies
       run: npm install
     
-    # - name: Running tests for our website...
-    #   run: npm test
+    - name: Running tests for our website...
+      run: npm test
 
     - name: Linting errors for our website...
       run: npm run lint
@@ -82,8 +82,15 @@ jobs:
     - name: Install dependencies
       run: go get -v ./...
 
-    # - name: Running tests for our server...
-    #   run: go test -v ./...
+    - name: Install golangci-lint
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.31.0
+
+    - name: Run golangci-lint
+      run: golangci-lint run ./...
+
+    - name: Running tests for our server...
+      run: go test -v ./...
 
     - name: Build the Go application
       run: go build -v ./...
