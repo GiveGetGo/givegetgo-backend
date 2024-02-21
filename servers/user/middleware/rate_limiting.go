@@ -12,7 +12,7 @@ import (
 
 func SetupRateLimiter(client *redis.Client) gin.HandlerFunc {
 	// Define a limit rate to 4 request per minute.
-	rate, err := limiter.NewRateFromFormatted("4-M")
+	rate, err := limiter.NewRateFromFormatted("8-M")
 	if err != nil {
 		log.Fatalf("Failed to create a rate: %v", err)
 		return nil

@@ -36,6 +36,25 @@ func (m *MockRedisClientInterface) EXPECT() *MockRedisClientInterfaceMockRecorde
 	return m.recorder
 }
 
+// Del mocks base method.
+func (m *MockRedisClientInterface) Del(ctx context.Context, keys ...string) *redis.IntCmd {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx}
+	for _, a := range keys {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Del", varargs...)
+	ret0, _ := ret[0].(*redis.IntCmd)
+	return ret0
+}
+
+// Del indicates an expected call of Del.
+func (mr *MockRedisClientInterfaceMockRecorder) Del(ctx interface{}, keys ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx}, keys...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Del", reflect.TypeOf((*MockRedisClientInterface)(nil).Del), varargs...)
+}
+
 // Get mocks base method.
 func (m *MockRedisClientInterface) Get(ctx context.Context, key string) *redis.StringCmd {
 	m.ctrl.T.Helper()

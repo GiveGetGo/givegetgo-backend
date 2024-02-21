@@ -32,6 +32,7 @@ type IUserUtils interface {
 	MarkMFAVerified(userID uint) error
 	StoreEncryptedTOTPSecret(userID uint, encryptedSecret string) error
 	CheckEmailVerificationSession(ctx context.Context, userID uint, event string) error
+	UpdatePassword(userID uint, hashedPassword string) error
 }
 
 type UserUtils struct {
@@ -304,6 +305,31 @@ func (u *UserUtils) CheckEmailVerificationSession(ctx context.Context, userID ui
 		return fmt.Errorf("unexpected session value for user ID %d and event %s", userID, event)
 	}
 
-	// If everything checks out, the email is verified for the event
+	// Delete the session key from Redis and return nil
+	_, err = u.RedisClient.Del(ctx, sessionKey).Result()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdatePassword updates the user's password
+func (u *UserUtils) UpdatePassword(userID uint, hashedPassword string) error {
+	var user schema.User
+	// First, find the user by ID to ensure they exist.
+	if err := u.DB.Where("user_id = ?", userID).First(&user).Error; err != nil {
+		log.Printf("Error finding user with ID %d: %v", userID, err)
+		return err
+	}
+
+	// Update the user's hashed password
+	user.HashedPassword = hashedPassword
+	if err := u.DB.Save(&user).Error; err != nil {
+		log.Printf("Error updating user's password: %v", err)
+		return err
+	}
+
+	// Return the updated user object and nil for the error
 	return nil
 }
