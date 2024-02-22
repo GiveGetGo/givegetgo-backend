@@ -11,8 +11,8 @@ import (
 	"user_server/utils"
 
 	"github.com/gin-gonic/gin"
+	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	gomock "go.uber.org/mock/gomock"
 	"gorm.io/gorm"
 )
 

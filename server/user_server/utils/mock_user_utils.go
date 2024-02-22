@@ -13,7 +13,7 @@ import (
 	reflect "reflect"
 	schema "user_server/schema"
 
-	gomock "go.uber.org/mock/gomock"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockIUserUtils is a mock of IUserUtils interface.

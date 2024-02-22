@@ -12,7 +12,7 @@ package db
 import (
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
+	gomock "github.com/golang/mock/gomock"
 	gorm "gorm.io/gorm"
 )
 
