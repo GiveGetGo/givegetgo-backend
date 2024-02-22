@@ -1,0 +1,7 @@
+go 1.22.0
+
+use (
+    ./server/shared
+    ./server/user_server
+    ./server/verification_server
+)

@@ -2,7 +2,7 @@ package db
 
 import (
 	"log"
-	"server/schema"
+	"verification_server/schema"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -34,7 +34,7 @@ func ConnectPostgresDB(dburl string) *gorm.DB {
 // AutoMigratePostgresDB migrates the database schema
 func AutoMigratePostgresDB(db *gorm.DB) error {
 	// Migrate the schema
-	err := db.AutoMigrate(&schema.User{}, &schema.RegisterEmailVerification{})
+	err := db.AutoMigrate(&schema.RegisterEmailVerification{})
 	if err != nil {
 		log.Fatalf("Error migrating PostgreSQL schema: %v", err)
 		return err

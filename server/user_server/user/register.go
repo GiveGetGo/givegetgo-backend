@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
-	"server/schema"
-	"server/utils"
+	"user_server/schema"
+	"user_server/utils"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -99,22 +99,13 @@ func UserRegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 			return
 		}
 
-		// generate a verification code
-		verificationCode, err := userUtils.GenerateRegisterVerificationCode(user.UserID)
+		// call /verification/request-email endpoint in the verification server to send the verification email
+		// if the verification server is down, return an internal server error
+		err = userUtils.RequestRegisterVerificationEmail(user.UserID, req.UserName, req.Email)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, GeneralErrorResponse{
 				Code:    "50004",
-				Message: "Failed to generate verification code",
-			})
-			return
-		}
-
-		// send the verification email
-		err = userUtils.SendRegisterVerificationCode(user, verificationCode)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, GeneralErrorResponse{
-				Code:    "50005",
-				Message: "Failed to send verification email",
+				Message: "Failed to request verification email",
 			})
 			return
 		}

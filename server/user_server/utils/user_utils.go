@@ -1,29 +1,28 @@
 package utils
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
+	"net/http"
 	"os"
-	"server/db"
-	"server/schema"
 	"strings"
-	"time"
+	"user_server/db"
+	"user_server/schema"
 
-	"github.com/sendgrid/sendgrid-go"
-	"github.com/sendgrid/sendgrid-go/helpers/mail"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // IUserUtils is the interface for the user utils for mocking
 type IUserUtils interface {
-	GenerateRegisterVerificationCode(userID uint) (string, error)
-	SendRegisterVerificationCode(user schema.User, code string) error
 	GetUserByEmail(email string) (schema.User, error)
 	CreateUser(username, email, hashedPassword string) (schema.User, error)
 	ValidatePassword(password string) error
 	HashPassword(password string) (string, error)
+	RequestRegisterVerificationEmail(userID uint, username string, email string) error
+	SetUserEmailVerified(email string) error
 }
 
 type UserUtils struct {
@@ -35,58 +34,6 @@ var _ IUserUtils = (*UserUtils)(nil)
 
 func NewUserUtils(db db.Database) *UserUtils {
 	return &UserUtils{DB: db}
-}
-
-// generateRegisterVerificationCode generates a random 7-digit code for email verification, and stores it in the database
-func (u *UserUtils) GenerateRegisterVerificationCode(userID uint) (string, error) {
-	var registerVerification schema.RegisterEmailVerification
-
-	// set the user id
-	registerVerification.UserID = userID
-
-	// generate a random 6-digit code
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	verificationCode := fmt.Sprintf("%07d", rng.Intn(1000000))
-	registerVerification.VerificationCode = verificationCode
-
-	// set the expiration time to 5 minutes from now
-	registerVerification.ExpirationTime = time.Now().Add(5 * time.Minute)
-
-	// create the verification record in the database everytime (for monitoring purposes), return an error if it fails
-	return verificationCode, u.DB.Create(&registerVerification).Error
-}
-
-// sendRegisterVerificationCode sends an email to the user with the verification code
-func (u *UserUtils) SendRegisterVerificationCode(user schema.User, code string) error {
-	// email info
-	fromName := os.Getenv("FROM_NAME")
-	fromEmail := os.Getenv("FROM_EMAIL")
-	subject := "Verification Code"
-	toName := user.UserName
-	toEmail := user.Email
-	plainTextContent := ""
-	htmlContent := "Your email verification code is " + "<strong>" + code + "</strong>.<br><br>" + "Please verify in 5 minutes."
-	err := SendEmail(fromName, fromEmail, subject, toName, toEmail, plainTextContent, htmlContent)
-	if err != nil {
-		return errors.New("send verification email fail")
-	}
-
-	return nil
-}
-
-// send email func
-func SendEmail(fromName, fromEmail, subject, toName, toEmail, plainTextContent, htmlContent string) error {
-	from := mail.NewEmail(fromName, fromEmail)
-	to := mail.NewEmail(toName, toEmail)
-	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
-	client := sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))
-	_, err := client.Send(message)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	return nil
 }
 
 // GetUserByEmail retrieves a user by email
@@ -173,4 +120,63 @@ func (u *UserUtils) HashPassword(password string) (string, error) {
 	}
 
 	return string(hashedPassword), nil
+}
+
+// RequestVerificationEmail - request verification email through calling verification_server /verification/request-email
+func (u *UserUtils) RequestRegisterVerificationEmail(userID uint, username string, email string) error {
+	verificationReqBody, err := json.Marshal(struct {
+		Event    string `json:"event"`
+		UserID   uint   `json:"userID"`
+		UserName string `json:"username"`
+		Email    string `json:"email"`
+	}{
+		Event:    "register",
+		UserID:   userID,
+		UserName: username,
+		Email:    email,
+	})
+	if err != nil {
+		log.Println("error marshalling request body")
+		return err
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", os.Getenv("VERIFICATION_SERVICE_URL")+"/v1/verification/request-email", bytes.NewBuffer(verificationReqBody))
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	// Set the headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Service", "USER")                    // Set the service name
+	req.Header.Set("X-Api-Key", os.Getenv("USER_API_KEY")) // Set the API key
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Println("verification service responded with status: ", resp.StatusCode)
+		// Handle non-OK responses here
+		return fmt.Errorf("verification service responded with status: %d", resp.StatusCode)
+	}
+
+	log.Println("successfully sent verification code")
+
+	return nil
+}
+
+// SetUserEmailVerified - set user email verified
+func (u *UserUtils) SetUserEmailVerified(email string) error {
+	// update the user's email to verified
+	err := u.DB.Model(&schema.User{}).Where("email = ?", email).Update("email_verified", true).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

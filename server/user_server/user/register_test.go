@@ -6,12 +6,12 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"server/schema"
-	"server/utils"
 	"testing"
+	"user_server/schema"
+	"user_server/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang/mock/gomock"
+	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
@@ -46,8 +46,6 @@ func TestUserRegisterHandler(t *testing.T) {
 				mockUserUtils.EXPECT().ValidatePassword("Password123!").Return(nil)
 				mockUserUtils.EXPECT().HashPassword("Password123!").Return("hashedPassword", nil)
 				mockUserUtils.EXPECT().CreateUser("testuser", "test@purdue.edu", "hashedPassword").Return(schema.User{UserID: 1}, nil)
-				mockUserUtils.EXPECT().GenerateRegisterVerificationCode((uint)(1)).Return("123456", nil)
-				mockUserUtils.EXPECT().SendRegisterVerificationCode(gomock.Any(), "123456").Return(nil)
 			},
 			expectedStatus: http.StatusCreated,
 			expectedCode:   "20101",
@@ -182,41 +180,6 @@ func TestUserRegisterHandler(t *testing.T) {
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedCode:   "50003",
-		},
-		{
-			name: "Failed to Generate Register Verification Code",
-			requestBody: UserRegisterRequest{
-				UserName: "testuser",
-				Email:    "test@purdue.edu",
-				Password: "Password123!",
-			},
-			mockSetup: func() {
-				mockUserUtils.EXPECT().GetUserByEmail("test@purdue.edu").Return(schema.User{}, gorm.ErrRecordNotFound)
-				mockUserUtils.EXPECT().ValidatePassword("Password123!").Return(nil)
-				mockUserUtils.EXPECT().HashPassword("Password123!").Return("hashedPassword", nil)
-				mockUserUtils.EXPECT().CreateUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(schema.User{UserID: 1}, nil)
-				mockUserUtils.EXPECT().GenerateRegisterVerificationCode(gomock.Any()).Return("", errors.New("generate verification code error"))
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedCode:   "50004",
-		},
-		{
-			name: "Failed to Send Register Verification Code",
-			requestBody: UserRegisterRequest{
-				UserName: "testuser",
-				Email:    "test@purdue.edu",
-				Password: "Password123!",
-			},
-			mockSetup: func() {
-				mockUserUtils.EXPECT().GetUserByEmail("test@purdue.edu").Return(schema.User{}, gorm.ErrRecordNotFound)
-				mockUserUtils.EXPECT().ValidatePassword("Password123!").Return(nil)
-				mockUserUtils.EXPECT().HashPassword("Password123!").Return("hashedPassword", nil)
-				mockUserUtils.EXPECT().CreateUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(schema.User{UserID: 1}, nil)
-				mockUserUtils.EXPECT().GenerateRegisterVerificationCode(gomock.Any()).Return("123456", nil)
-				mockUserUtils.EXPECT().SendRegisterVerificationCode(gomock.Any(), gomock.Any()).Return(errors.New("send verification code error"))
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedCode:   "50005",
 		},
 	}
 

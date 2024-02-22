@@ -1,69 +1,18 @@
 package utils
 
 import (
-	"log"
-	"server/db"
-	schema "server/schema"
 	"testing"
+	"user_server/db"
+	schema "user_server/schema"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
-
-func TestGenerateRegisterVerificationCode(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	// Create a mock controller
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Create a mock database object
-	mockDB := db.NewMockDatabase(ctrl)
-	userUtils := NewUserUtils(mockDB)
-
-	log.Println("TestGenerateRegisterVerificationCode")
-	log.Println(mockDB)
-	log.Println(userUtils)
-
-	// Test case for successful code generation
-	t.Run("successful code generation", func(t *testing.T) {
-		userID := uint(1)
-		mockDB.EXPECT().Create(gomock.Any()).Return(&gorm.DB{Error: nil}) // Expect database create call to succeed
-
-		code, err := userUtils.GenerateRegisterVerificationCode(userID)
-		assert.NoError(t, err)
-		assert.Len(t, code, 7) // Ensure code is 7 digits
-	})
-}
-
-func TestSendRegisterVerificationCode(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	// Create a mock controller
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Create a mock database object
-	mockDB := db.NewMockDatabase(ctrl)
-	userUtils := NewUserUtils(mockDB)
-
-	// Test case for successful code generation
-	t.Run("successful code generation", func(t *testing.T) {
-		user := schema.User{
-			UserName: "testuser",
-			Email:    "root@givegetgo.xyz",
-		}
-		code := "1234567"
-
-		err := userUtils.SendRegisterVerificationCode(user, code)
-		assert.NoError(t, err)
-	})
-}
 
 func TestGetUserByEmail(t *testing.T) {
 	// Create a new mock SQL database
@@ -171,4 +120,16 @@ func TestHashPassword(t *testing.T) {
 	// Verify the password is correctly hashed
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte("password123"))
 	assert.NoError(t, err)
+}
+
+func TestRequestVerificationEmail(t *testing.T) {
+	userUtils := NewUserUtils(nil)
+
+	t.Run("Request Verification Email", func(t *testing.T) {
+		userID := uint(1)
+		username := "testuser"
+		email := "test@purdue.edu"
+		err := userUtils.RequestRegisterVerificationEmail(userID, username, email)
+		assert.NoError(t, err)
+	})
 }

@@ -8,8 +8,9 @@ import (
 
 type RegisterEmailVerification struct {
 	gorm.Model
-	RegisterVerificationID uint `gorm:"primaryKey"`
-	UserID                 uint `gorm:"index"`
+	RegisterVerificationID uint   `gorm:"primaryKey"`
+	UserID                 uint   `gorm:"index"`
+	Email                  string `gorm:"index"`
 	VerificationCode       string
 	ExpirationTime         time.Time
 	IsVerified             bool `gorm:"default:false"`
