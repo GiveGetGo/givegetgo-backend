@@ -34,7 +34,7 @@ func ConnectPostgresDB(dburl string) *gorm.DB {
 // AutoMigratePostgresDB migrates the database schema
 func AutoMigratePostgresDB(db *gorm.DB) error {
 	// Migrate the schema
-	err := db.AutoMigrate(&schema.RegisterEmailVerification{})
+	err := db.AutoMigrate(&schema.RegisterEmailVerification{}, &schema.ResetPasswordVerification{})
 	if err != nil {
 		log.Fatalf("Error migrating PostgreSQL schema: %v", err)
 		return err
