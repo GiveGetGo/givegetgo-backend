@@ -1,0 +1,59 @@
+name: GiveGetGo CD Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      # Checkout the repository
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Setup for deployment, e.g., configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Login to AWS ECR service
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Determine which services have changed
+      - name: Check for changed services
+        id: changed_services
+        run: |
+          echo "::set-output name=user_service_changed::$(git diff --name-only ${{ github.sha }} ${{ github.event.before }} | grep -q 'server/user_server' && echo 'true' || echo 'false')"
+          echo "::set-output name=verification_service_changed::$(git diff --name-only ${{ github.sha }} ${{ github.event.before }} | grep -q 'server/verification_server' && echo 'true' || echo 'false')"
+
+      # Set up Docker environment variables
+      - name: Set up Docker environment variables
+        run: |
+          echo "ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com" >> $GITHUB_ENV
+          echo "USER_SERVICE_REPO_NAME=${{ secrets.AWS_ECR_USER_SERVICE_REPO }}" >> $GITHUB_ENV
+          echo "VERIFICATION_SERVICE_REPO_NAME=${{ secrets.AWS_ECR_VERIFICATION_SERVICE_REPO }}" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
+
+      # Build and push user-service
+      - name: Build and push user-service
+        if: steps.changed_services.outputs.user_service_changed == 'true'
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$USER_SERIVCE_REPO_NAME:$IMAGE_TAG ./server/user_server
+          docker push $ECR_REGISTRY/$USER_SERVICE_REPO_NAME:$IMAGE_TAG
+
+          # Build and push verification-service
+      - name: Build and push verification-service
+        if: steps.changed_services.outputs.verification_service_changed == 'true'
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$VERIFICATION_SERVICE_REPO_NAME:$IMAGE_TAG ./server/verification_server
+          docker push $ECR_REGISTRY/$VERIFICATION_SERVICE_REPO_NAME:$IMAGE_TAG
