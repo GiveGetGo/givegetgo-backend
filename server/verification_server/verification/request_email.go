@@ -23,8 +23,8 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 		var req GetEmailVerificationRequest
 		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, GeneralVerificationResponse{
-				Code: "40001",
-				Msg:  "Invalid request body",
+				Code:    "40001",
+				Message: "Invalid request body",
 			})
 			return
 		}
@@ -33,8 +33,8 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 		matched, _ := regexp.MatchString(`^[a-zA-Z0-9]+@purdue\.edu$`, req.Email)
 		if !matched {
 			c.JSON(http.StatusBadRequest, GeneralVerificationResponse{
-				Code: "40002",
-				Msg:  "Email must be a @purdue.edu address",
+				Code:    "40002",
+				Message: "Email must be a @purdue.edu address",
 			})
 			return
 		}
@@ -46,8 +46,8 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 			verificationCode, err := verificationUtils.GenerateRegisterVerificationCode(req.UserID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, GeneralVerificationResponse{
-					Code: "50001",
-					Msg:  "Internal server error",
+					Code:    "50001",
+					Message: "Internal server error",
 				})
 				return
 			}
@@ -56,16 +56,16 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 			err = verificationUtils.SendRegisterVerificationCode(req.UserName, req.Email, verificationCode)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, GeneralVerificationResponse{
-					Code: "50001",
-					Msg:  "Internal server error",
+					Code:    "50001",
+					Message: "Internal server error",
 				})
 				return
 			}
 
 			// return verification success
 			c.JSON(http.StatusOK, GeneralVerificationResponse{
-				Code: "20000",
-				Msg:  "Verification success",
+				Code:    "20000",
+				Message: "Verification success",
 			})
 
 		case ResetEvent:
@@ -73,8 +73,8 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 			verificationCode, err := verificationUtils.GenerateResetPasswordVerificationCode(req.UserID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, GeneralVerificationResponse{
-					Code: "50001",
-					Msg:  "Internal server error",
+					Code:    "50001",
+					Message: "Internal server error",
 				})
 				return
 			}
@@ -83,22 +83,22 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 			err = verificationUtils.SendResetPasswordVerificationCode(req.UserName, req.Email, verificationCode)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, GeneralVerificationResponse{
-					Code: "50001",
-					Msg:  "Internal server error",
+					Code:    "50001",
+					Message: "Internal server error",
 				})
 				return
 			}
 
 			// return verification success
 			c.JSON(http.StatusOK, GeneralVerificationResponse{
-				Code: "20000",
-				Msg:  "Verification success",
+				Code:    "20000",
+				Message: "Verification success",
 			})
 
 		default:
 			c.JSON(http.StatusBadRequest, GeneralVerificationResponse{
-				Code: "40004",
-				Msg:  "Invalid event",
+				Code:    "40004",
+				Message: "Invalid event",
 			})
 			return
 		}

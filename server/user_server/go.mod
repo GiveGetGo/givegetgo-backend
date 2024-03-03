@@ -7,7 +7,9 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/golang/mock v1.6.0
 	github.com/joho/godotenv v1.5.1
+	github.com/pquerna/otp v1.4.0
 	github.com/redis/go-redis/v9 v9.4.0
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/stretchr/testify v1.8.4
 	github.com/ulule/limiter/v3 v3.11.2
 	golang.org/x/crypto v0.19.0
@@ -16,6 +18,7 @@ require (
 )
 
 require (
+	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect

@@ -31,7 +31,7 @@ func UserRegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// Parse the request body
 		var req UserRegisterRequest
 		if err := c.BindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, GeneralErrorResponse{
+			c.JSON(http.StatusBadRequest, GeneralUserResponse{
 				Code:    "40001",
 				Message: "Invalid request body",
 			})
@@ -41,7 +41,7 @@ func UserRegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// Check if the email is in the correct format
 		matched, _ := regexp.MatchString(`^[a-zA-Z0-9]+@purdue\.edu$`, req.Email)
 		if !matched {
-			c.JSON(http.StatusBadRequest, GeneralErrorResponse{
+			c.JSON(http.StatusBadRequest, GeneralUserResponse{
 				Code:    "40002",
 				Message: "Email must be a @purdue.edu address",
 			})
@@ -53,7 +53,7 @@ func UserRegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 
 		// If no error, or the error is not a record not found error, return an internal server error
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusInternalServerError, GeneralErrorResponse{
+			c.JSON(http.StatusInternalServerError, GeneralUserResponse{
 				Code:    "50001",
 				Message: "Internal server error",
 			})
@@ -62,7 +62,7 @@ func UserRegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 
 		// If the user exists, return an error
 		if (schema.User{}) != user {
-			c.JSON(http.StatusBadRequest, GeneralErrorResponse{
+			c.JSON(http.StatusBadRequest, GeneralUserResponse{
 				Code:    "40003",
 				Message: "Email already registered",
 			})
@@ -72,7 +72,7 @@ func UserRegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// Check if the password is valid
 		err = userUtils.ValidatePassword(req.Password)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, GeneralErrorResponse{
+			c.JSON(http.StatusBadRequest, GeneralUserResponse{
 				Code:    "40004",
 				Message: "Invalid password",
 			})
@@ -82,7 +82,7 @@ func UserRegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// hash the password
 		hashedPassword, err := userUtils.HashPassword(req.Password)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, GeneralErrorResponse{
+			c.JSON(http.StatusInternalServerError, GeneralUserResponse{
 				Code:    "50002",
 				Message: "Failed to hash password",
 			})
@@ -92,7 +92,7 @@ func UserRegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// Create the user
 		user, err = userUtils.CreateUser(req.UserName, req.Email, hashedPassword)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, GeneralErrorResponse{
+			c.JSON(http.StatusInternalServerError, GeneralUserResponse{
 				Code:    "50003",
 				Message: "Failed to create user",
 			})
@@ -103,7 +103,7 @@ func UserRegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// if the verification server is down, return an internal server error
 		err = userUtils.RequestRegisterVerificationEmail(user.UserID, req.UserName, req.Email)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, GeneralErrorResponse{
+			c.JSON(http.StatusInternalServerError, GeneralUserResponse{
 				Code:    "50004",
 				Message: "Failed to request verification email",
 			})

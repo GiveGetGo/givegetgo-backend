@@ -39,6 +39,9 @@ func main() {
 
 	// Public routes
 	v1.POST("/user/register", user.UserRegisterHandler(userUtils))
+	v1.POST("/user/request-mfa", user.RequestMFAVerificationHandler(userUtils))
+	v1.POST("/user/verify-mfa", user.VerifyMFAHandler(userUtils))
+	v1.GET("/user/mfa-qrcode/:userid", user.MFAQRCodeHandler(userUtils))
 
 	// start the server
 	r.Run(":8080")
