@@ -7,6 +7,6 @@ type GeneralVerificationResponse struct {
 
 // enum for the verification event, register and reset password
 const (
-	RegisterEvent = "register"
-	ResetEvent    = "reset"
+	RegisterEvent      = "register"
+	ResetPasswordEvent = "reset-password"
 )

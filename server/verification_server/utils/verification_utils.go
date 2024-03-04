@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,13 +13,15 @@ import (
 	"time"
 	"verification_server/schema"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
 	"gorm.io/gorm"
 )
 
 type VerificationUtils struct {
-	DB *gorm.DB
+	DB          *gorm.DB
+	RedisClient *redis.Client
 }
 
 type IVerificationUtils interface {
@@ -29,10 +32,11 @@ type IVerificationUtils interface {
 	GenerateResetPasswordVerificationCode(userID uint) (string, error)
 	SendResetPasswordVerificationCode(username string, email string, code string) error
 	GetLatestResetPasswordVerificationCode(userID uint) (string, error)
+	GenerateVerifiedSession(ctx context.Context, userID uint, event string) error
 }
 
-func NewVerificationUtils(db *gorm.DB) *VerificationUtils {
-	return &VerificationUtils{DB: db}
+func NewVerificationUtils(db *gorm.DB, redisClient *redis.Client) *VerificationUtils {
+	return &VerificationUtils{DB: db, RedisClient: redisClient}
 }
 
 // generateRegisterVerificationCode generates a random 7-digit code for email verification, and stores it in the database
@@ -189,4 +193,22 @@ func (u *VerificationUtils) GetLatestRegisterVerificationCode(userID uint) (stri
 	}
 
 	return registerVerification.VerificationCode, nil
+}
+
+// Set redis session after verification
+func (u *VerificationUtils) GenerateVerifiedSession(ctx context.Context, userID uint, event string) error {
+	sessionKey := fmt.Sprintf("session:%d:%s", userID, event) // Set the session key
+	sessionValue := "verified"                                // Set the session value
+	expiration := 5 * time.Minute                             // Set the expiration time for the session
+
+	// Set the session key, value, and expiration in Redis
+	err := u.RedisClient.Set(ctx, sessionKey, sessionValue, expiration).Err()
+	if err != nil {
+		return err
+	}
+
+	// print the session key
+	log.Println("session key:", sessionKey)
+
+	return nil // Return nil if no errors occurred
 }

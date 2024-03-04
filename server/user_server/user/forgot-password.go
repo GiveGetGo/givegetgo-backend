@@ -22,8 +22,7 @@ type UserForgetPassResponse struct {
 	Message string `json:"message"`
 }
 
-
-func forgotPasswordHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
+func ForgotPasswordHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req UserForgetPassRequest
 		// Parse and validate the request body
@@ -35,7 +34,7 @@ func forgotPasswordHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 			})
 			return
 		}
-		
+
 		// Check if the email is in the correct format
 		matched, _ := regexp.MatchString(`^[a-zA-Z0-9]+@purdue\.edu$`, req.Email)
 		if !matched {
@@ -88,4 +87,3 @@ func forgotPasswordHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		})
 	}
 }
-

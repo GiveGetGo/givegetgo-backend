@@ -29,6 +29,9 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 			return
 		}
 
+		// get the context
+		ctx := c.Request.Context()
+
 		// Check if the email is in the correct format
 		matched, _ := regexp.MatchString(`^[a-zA-Z0-9]+@purdue\.edu$`, req.Email)
 		if !matched {
@@ -68,7 +71,7 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 				Message: "Verification success",
 			})
 
-		case ResetEvent:
+		case ResetPasswordEvent:
 			// generate a verification code
 			verificationCode, err := verificationUtils.GenerateResetPasswordVerificationCode(req.UserID)
 			if err != nil {
@@ -81,6 +84,16 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 
 			// send the verification code to the user
 			err = verificationUtils.SendResetPasswordVerificationCode(req.UserName, req.Email, verificationCode)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, GeneralVerificationResponse{
+					Code:    "50001",
+					Message: "Internal server error",
+				})
+				return
+			}
+
+			// generate a session for the user
+			err = verificationUtils.GenerateVerifiedSession(ctx, req.UserID, ResetPasswordEvent)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, GeneralVerificationResponse{
 					Code:    "50001",

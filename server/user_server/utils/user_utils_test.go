@@ -3,6 +3,7 @@ package utils
 import (
 	"testing"
 	"user_server/db"
+	"user_server/middleware"
 	schema "user_server/schema"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -32,7 +33,12 @@ func TestGetUserByEmail(t *testing.T) {
 		t.Fatalf("Failed to open mock GORM database")
 	}
 
-	userUtils := NewUserUtils(db)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRedisClient := middleware.NewMockRedisClientInterface(ctrl) // Use the correct constructor name for your mock
+
+	userUtils := NewUserUtils(db, mockRedisClient)
 
 	email := "test@purdue.edu"
 	expectedUser := schema.User{UserID: 1, UserName: "testuser", Email: email}
@@ -72,7 +78,8 @@ func TestCreateUser(t *testing.T) {
 
 	// Create a mock database object
 	mockDB := db.NewMockDatabase(ctrl)
-	userUtils := NewUserUtils(mockDB)
+	mockRedisClient := middleware.NewMockRedisClientInterface(ctrl)
+	userUtils := NewUserUtils(mockDB, mockRedisClient)
 
 	// Test case for user creation success
 	t.Run("Created User", func(t *testing.T) {
@@ -88,7 +95,7 @@ func TestCreateUser(t *testing.T) {
 }
 
 func TestValidatePassword(t *testing.T) {
-	userUtils := NewUserUtils(nil)
+	userUtils := NewUserUtils(nil, nil)
 
 	t.Run("Valid Password", func(t *testing.T) {
 		err := userUtils.ValidatePassword("Password123!")
@@ -112,7 +119,7 @@ func TestValidatePassword(t *testing.T) {
 }
 
 func TestHashPassword(t *testing.T) {
-	userUtils := NewUserUtils(nil)
+	userUtils := NewUserUtils(nil, nil)
 
 	hashedPassword, err := userUtils.HashPassword("password123")
 	assert.NoError(t, err)
@@ -123,7 +130,7 @@ func TestHashPassword(t *testing.T) {
 }
 
 func TestRequestVerificationEmail(t *testing.T) {
-	userUtils := NewUserUtils(nil)
+	userUtils := NewUserUtils(nil, nil)
 
 	t.Run("Request Verification Email", func(t *testing.T) {
 		userID := uint(1)

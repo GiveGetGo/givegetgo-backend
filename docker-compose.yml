@@ -62,12 +62,15 @@ services:
     env_file:
       - ./server/shared/redis/.env.redis
     volumes:
-      - redis:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf 
+      - redis-data:/data
+    command:
+      redis-server /usr/local/etc/redis/redis.conf
 
 volumes:
   user-postgres:
   verification-postgres:
-  redis:
+  redis-data:
 
 networks:
   givegetgo-network:

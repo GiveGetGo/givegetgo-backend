@@ -66,7 +66,7 @@ func VerifyEmailVerificationHandler(verificationUtils utils.IVerificationUtils) 
 				Code:    "20000",
 				Message: "Verification success",
 			})
-		case ResetEvent:
+		case ResetPasswordEvent:
 			// verify the verification code
 			// query the latest verification code for the email
 			latestVerificationCode, err := verificationUtils.GetLatestResetPasswordVerificationCode(req.UserID)

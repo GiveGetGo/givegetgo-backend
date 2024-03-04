@@ -24,8 +24,15 @@ func main() {
 	// Set up database connection
 	DB := db.ConnectPostgresDB(dburl)
 	db.AutoMigratePostgresDB(DB)
-	userUtils := utils.NewUserUtils(DB)
-	rateLimiter := middleware.SetupRateLimiter()
+
+	// Set up Redis
+	redisClient := middleware.SetupRedis()
+
+	// Set up rate limiter
+	rateLimiter := middleware.SetupRateLimiter(redisClient)
+
+	// Set up user utils
+	userUtils := utils.NewUserUtils(DB, redisClient)
 
 	// set up the router and v1 routes
 	r := gin.Default()
@@ -42,6 +49,7 @@ func main() {
 	v1.POST("/user/request-mfa", user.RequestMFAVerificationHandler(userUtils))
 	v1.POST("/user/verify-mfa", user.VerifyMFAHandler(userUtils))
 	v1.GET("/user/mfa-qrcode/:userid", user.MFAQRCodeHandler(userUtils))
+	v1.POST("user/forgot-password", user.ForgotPasswordHandler(userUtils))
 
 	// start the server
 	r.Run(":8080")

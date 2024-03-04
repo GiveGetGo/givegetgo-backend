@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"log"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -11,15 +10,7 @@ import (
 	sredis "github.com/ulule/limiter/v3/drivers/store/redis"
 )
 
-func SetupRateLimiter() gin.HandlerFunc {
-	// Create a redis client.
-	option, err := redis.ParseURL(os.Getenv("REDIS_URL"))
-	if err != nil {
-		log.Fatalf("Failed to create a redis client: %v", err)
-		return nil
-	}
-	client := redis.NewClient(option)
-
+func SetupRateLimiter(client *redis.Client) gin.HandlerFunc {
 	// Define a limit rate to 4 request per minute.
 	rate, err := limiter.NewRateFromFormatted("4-M")
 	if err != nil {
