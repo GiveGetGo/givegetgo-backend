@@ -22,8 +22,8 @@ func VerifyEmailVerificationHandler(verificationUtils utils.IVerificationUtils) 
 		var req EmailVerificationRequest
 		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, GeneralVerificationResponse{
-				Code: "40001",
-				Msg:  "Invalid request body",
+				Code:    "40001",
+				Message: "Invalid request body",
 			})
 			return
 		}
@@ -36,8 +36,8 @@ func VerifyEmailVerificationHandler(verificationUtils utils.IVerificationUtils) 
 			latestVerificationCode, err := verificationUtils.GetLatestRegisterVerificationCode(req.UserID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, GeneralVerificationResponse{
-					Code: "50001",
-					Msg:  "Internal server error",
+					Code:    "50001",
+					Message: "Internal server error",
 				})
 				return
 			}
@@ -45,8 +45,8 @@ func VerifyEmailVerificationHandler(verificationUtils utils.IVerificationUtils) 
 			// check if the verification code is correct
 			if latestVerificationCode != req.VerificationCode {
 				c.JSON(http.StatusBadRequest, GeneralVerificationResponse{
-					Code: "40003",
-					Msg:  "Invalid verification code",
+					Code:    "40003",
+					Message: "Invalid verification code",
 				})
 				return
 			}
@@ -55,16 +55,16 @@ func VerifyEmailVerificationHandler(verificationUtils utils.IVerificationUtils) 
 			err = verificationUtils.RequestEmailVerified(req.Email)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, GeneralVerificationResponse{
-					Code: "50001",
-					Msg:  "Internal server error",
+					Code:    "50001",
+					Message: "Internal server error",
 				})
 				return
 			}
 
 			// return verification success
 			c.JSON(http.StatusOK, GeneralVerificationResponse{
-				Code: "20000",
-				Msg:  "Verification success",
+				Code:    "20000",
+				Message: "Verification success",
 			})
 		case ResetEvent:
 			// verify the verification code
@@ -72,8 +72,8 @@ func VerifyEmailVerificationHandler(verificationUtils utils.IVerificationUtils) 
 			latestVerificationCode, err := verificationUtils.GetLatestResetPasswordVerificationCode(req.UserID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, GeneralVerificationResponse{
-					Code: "50001",
-					Msg:  "Internal server error",
+					Code:    "50001",
+					Message: "Internal server error",
 				})
 				return
 			}
@@ -81,21 +81,21 @@ func VerifyEmailVerificationHandler(verificationUtils utils.IVerificationUtils) 
 			// check if the verification code is correct
 			if latestVerificationCode != req.VerificationCode {
 				c.JSON(http.StatusBadRequest, GeneralVerificationResponse{
-					Code: "40003",
-					Msg:  "Invalid verification code",
+					Code:    "40003",
+					Message: "Invalid verification code",
 				})
 				return
 			}
 
 			// return verification success
 			c.JSON(http.StatusOK, GeneralVerificationResponse{
-				Code: "20000",
-				Msg:  "Verification success",
+				Code:    "20000",
+				Message: "Verification success",
 			})
 		default:
 			c.JSON(http.StatusBadRequest, GeneralVerificationResponse{
-				Code: "40004",
-				Msg:  "Invalid event",
+				Code:    "40004",
+				Message: "Invalid event",
 			})
 			return
 		}

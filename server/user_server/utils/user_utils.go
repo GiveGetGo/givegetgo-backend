@@ -17,6 +17,7 @@ import (
 
 // IUserUtils is the interface for the user utils for mocking
 type IUserUtils interface {
+	GetUserByID(userID uint) (schema.User, error)
 	GetUserByEmail(email string) (schema.User, error)
 	CreateUser(username, email, hashedPassword string) (schema.User, error)
 	ValidatePassword(password string) error
@@ -24,6 +25,7 @@ type IUserUtils interface {
 	RequestRegisterVerificationEmail(userID uint, username string, email string) error
 	SetUserEmailVerified(email string) error
 	RequestForgetpassVerificationEmail(userID uint, username string, email string) error
+	StoreEncryptedTOTPSecret(userID uint, encryptedSecret string) error
 }
 
 type UserUtils struct {
@@ -35,6 +37,19 @@ var _ IUserUtils = (*UserUtils)(nil)
 
 func NewUserUtils(db db.Database) *UserUtils {
 	return &UserUtils{DB: db}
+}
+
+// GetUserByID retrieves a user by ID
+func (u *UserUtils) GetUserByID(userID uint) (schema.User, error) {
+	var user schema.User
+	err := u.DB.Where("user_id = ?", userID).First(&user).Error
+
+	// if the user is not found, return an empty user
+	if err != nil {
+		return schema.User{}, err
+	}
+
+	return user, nil
 }
 
 // GetUserByEmail retrieves a user by email
@@ -182,7 +197,6 @@ func (u *UserUtils) SetUserEmailVerified(email string) error {
 	return nil
 }
 
-
 // RequestVerificationEmail - request verification email through calling verification_server /verification/request-email
 func (u *UserUtils) RequestForgetpassVerificationEmail(userID uint, username string, email string) error {
 	verificationReqBody, err := json.Marshal(struct {
@@ -198,40 +212,48 @@ func (u *UserUtils) RequestForgetpassVerificationEmail(userID uint, username str
 	})
 
 	if err != nil {
-        log.Println("error marshalling request body for forget password")
-        return err
-    }
+		log.Println("error marshalling request body for forget password")
+		return err
+	}
 
 	// Create the HTTP client and request
-    client := &http.Client{}
-    req, err := http.NewRequest("POST", os.Getenv("VERIFICATION_SERVICE_URL")+"/v1/verification/request-email", bytes.NewBuffer(verificationReqBody))
-    if err != nil {
-        log.Println("error creating request for forget password:", err)
-        return err
-    }
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", os.Getenv("VERIFICATION_SERVICE_URL")+"/v1/verification/request-email", bytes.NewBuffer(verificationReqBody))
+	if err != nil {
+		log.Println("error creating request for forget password:", err)
+		return err
+	}
 
 	// Set the headers
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Service", "USER")                    // Set the service name
 	req.Header.Set("X-Api-Key", os.Getenv("USER_API_KEY")) // Set the API key
 
-
 	// Send the request
-    resp, err := client.Do(req)
-    if err != nil {
-        log.Println("error sending forget password verification email:", err)
-        return err
-    }
-    defer resp.Body.Close()
-
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("error sending forget password verification email:", err)
+		return err
+	}
+	defer resp.Body.Close()
 
 	// Check the response status
-    if resp.StatusCode != http.StatusOK {
-        log.Println("verification service responded with status for forget password:", resp.StatusCode)
-        return fmt.Errorf("verification service responded with status: %d", resp.StatusCode)
-    }
+	if resp.StatusCode != http.StatusOK {
+		log.Println("verification service responded with status for forget password:", resp.StatusCode)
+		return fmt.Errorf("verification service responded with status: %d", resp.StatusCode)
+	}
 
-    log.Println("successfully sent forget password verification email")
-    return nil
+	log.Println("successfully sent forget password verification email")
+	return nil
 }
 
+// StoreEncryptedTOTPSecret - store encrypted TOTP secret
+func (u *UserUtils) StoreEncryptedTOTPSecret(userID uint, encryptedSecret string) error {
+	// store the encrypted secret in the database
+	err := u.DB.Model(&schema.User{}).Where("user_id = ?", userID).Update("mfa_secret", encryptedSecret).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

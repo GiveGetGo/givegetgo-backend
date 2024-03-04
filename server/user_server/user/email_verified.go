@@ -26,7 +26,7 @@ func SetUserEmailVerifiedHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// Parse the request body
 		var req SetUserEmailVerifiedRequest
 		if err := c.BindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, GeneralErrorResponse{
+			c.JSON(http.StatusBadRequest, GeneralUserResponse{
 				Code:    "40001",
 				Message: "Invalid request body",
 			})
@@ -37,7 +37,7 @@ func SetUserEmailVerifiedHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		user, err := userUtils.GetUserByEmail(req.Email)
 		if err != nil {
 			log.Println(err)
-			c.JSON(http.StatusInternalServerError, GeneralErrorResponse{
+			c.JSON(http.StatusInternalServerError, GeneralUserResponse{
 				Code:    "50001",
 				Message: "Internal server error",
 			})
@@ -46,7 +46,7 @@ func SetUserEmailVerifiedHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 
 		// If the user does not exist, return an error
 		if (schema.User{}) == user {
-			c.JSON(http.StatusBadRequest, GeneralErrorResponse{
+			c.JSON(http.StatusBadRequest, GeneralUserResponse{
 				Code:    "40002",
 				Message: "User not found",
 			})
@@ -55,7 +55,7 @@ func SetUserEmailVerifiedHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 
 		// If the user's email is already verified, return an error
 		if user.EmailVerified {
-			c.JSON(http.StatusBadRequest, GeneralErrorResponse{
+			c.JSON(http.StatusBadRequest, GeneralUserResponse{
 				Code:    "40003",
 				Message: "Email already verified",
 			})
@@ -66,7 +66,7 @@ func SetUserEmailVerifiedHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		err = userUtils.SetUserEmailVerified(req.Email)
 		if err != nil {
 			log.Println(err)
-			c.JSON(http.StatusInternalServerError, GeneralErrorResponse{
+			c.JSON(http.StatusInternalServerError, GeneralUserResponse{
 				Code:    "50002",
 				Message: "Failed to set email verified",
 			})
