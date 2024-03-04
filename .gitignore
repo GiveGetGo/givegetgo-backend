@@ -6,3 +6,6 @@ client_web/node_modules
 server/user_server/.env.user
 server/verification_server/.env.verification
 .env
+
+# config files
+redis.conf

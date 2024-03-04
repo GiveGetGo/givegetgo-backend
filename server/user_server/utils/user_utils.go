@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,8 +11,10 @@ import (
 	"os"
 	"strings"
 	"user_server/db"
+	"user_server/middleware"
 	"user_server/schema"
 
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -29,14 +32,15 @@ type IUserUtils interface {
 }
 
 type UserUtils struct {
-	DB db.Database
+	DB          db.Database
+	RedisClient middleware.RedisClientInterface
 }
 
 // Ensure UserUtils implements IUserUtils
 var _ IUserUtils = (*UserUtils)(nil)
 
-func NewUserUtils(db db.Database) *UserUtils {
-	return &UserUtils{DB: db}
+func NewUserUtils(db db.Database, redisClient middleware.RedisClientInterface) *UserUtils {
+	return &UserUtils{DB: db, RedisClient: redisClient}
 }
 
 // GetUserByID retrieves a user by ID
@@ -157,7 +161,7 @@ func (u *UserUtils) RequestRegisterVerificationEmail(userID uint, username strin
 	}
 
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", os.Getenv("VERIFICATION_SERVICE_URL")+"/v1/verification/request-email", bytes.NewBuffer(verificationReqBody))
+	req, err := http.NewRequest("POST", os.Getenv("VERIFICATION_SERVICE_URL")+"/v1/internal/verification/request-email", bytes.NewBuffer(verificationReqBody))
 	if err != nil {
 		log.Println(err)
 		return err
@@ -205,7 +209,7 @@ func (u *UserUtils) RequestForgetpassVerificationEmail(userID uint, username str
 		UserName string `json:"username"`
 		Email    string `json:"email"`
 	}{
-		Event:    "forget_password",
+		Event:    "reset-password",
 		UserID:   userID,
 		UserName: username,
 		Email:    email,
@@ -218,7 +222,7 @@ func (u *UserUtils) RequestForgetpassVerificationEmail(userID uint, username str
 
 	// Create the HTTP client and request
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", os.Getenv("VERIFICATION_SERVICE_URL")+"/v1/verification/request-email", bytes.NewBuffer(verificationReqBody))
+	req, err := http.NewRequest("POST", os.Getenv("VERIFICATION_SERVICE_URL")+"/v1/internal/verification/request-email", bytes.NewBuffer(verificationReqBody))
 	if err != nil {
 		log.Println("error creating request for forget password:", err)
 		return err
@@ -255,5 +259,30 @@ func (u *UserUtils) StoreEncryptedTOTPSecret(userID uint, encryptedSecret string
 		return err
 	}
 
+	return nil
+}
+
+// CheckEmailVerificationSession checks if the user's email verification session exists and is valid
+func (u *UserUtils) CheckEmailVerificationSession(ctx context.Context, userID uint, event string) error {
+	sessionKey := fmt.Sprintf("session:%d:%s", userID, event) // Construct the session key
+
+	// Use the Redis GET command to retrieve the session value
+	sessionValue, err := u.RedisClient.Get(ctx, sessionKey).Result()
+
+	if err == redis.Nil {
+		// The key does not exist or the session has expired
+		return fmt.Errorf("session not found or expired for user ID %d and event %s", userID, event)
+	} else if err != nil {
+		// An error occurred while trying to retrieve the session value
+		return err
+	}
+
+	// Check the session value to determine if it's the expected one
+	if sessionValue != "verified" {
+		// The session value is not what was expected
+		return fmt.Errorf("unexpected session value for user ID %d and event %s", userID, event)
+	}
+
+	// If everything checks out, the email is verified for the event
 	return nil
 }
