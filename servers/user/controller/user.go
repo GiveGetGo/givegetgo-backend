@@ -150,6 +150,64 @@ func ForgotPasswordHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 	}
 }
 
+// ResetPasswordHandler is the handler for the reset password endpoint
+func ResetPasswordHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Parse the request body
+		var req types.UserResetPassRequest
+		if err := c.BindJSON(&req); err != nil {
+			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			return
+		}
+
+		// find the user by email
+		user, err := userUtils.GetUserByEmail(req.Email)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				types.ResponseError(c, http.StatusBadRequest, types.UserNotFound())
+				return
+			}
+
+			// Handle internal server error
+			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			return
+		}
+
+		ctx := c.Request.Context() // get the context
+
+		// check if session is valid
+		err = userUtils.CheckEmailVerificationSession(ctx, user.UserID, types.ResetPasswordEvent)
+		if err != nil {
+			types.ResponseError(c, http.StatusBadRequest, types.InvalidSession())
+			return
+		}
+
+		// Check if the password is valid
+		err = userUtils.ValidatePassword(req.Newpassword)
+		if err != nil {
+			types.ResponseError(c, http.StatusBadRequest, types.InvalidCredentials())
+			return
+		}
+
+		// hash the password
+		hashedPassword, err := userUtils.HashPassword(req.Newpassword)
+		if err != nil {
+			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			return
+		}
+
+		// Update the user's password
+		err = userUtils.UpdatePassword(user.UserID, hashedPassword)
+		if err != nil {
+			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			return
+		}
+
+		// Return success
+		types.ResponseSuccess(c, http.StatusOK, "reset-password", user.UserID, types.Success())
+	}
+}
+
 // successful email verification from verification_server, call this endpoint to set the user's email to verified
 func SetUserEmailVerifiedHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 	return func(c *gin.Context) {

@@ -34,6 +34,7 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 		userGroup := authGroup.Group("/user")
 		{
 			userGroup.POST("/forgot-password", controller.ForgotPasswordHandler(userUtils))
+			userGroup.POST("/reset-password", controller.ResetPasswordHandler(userUtils))
 		}
 
 		mfaGroup := authGroup.Group("/mfa")

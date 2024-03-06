@@ -5,6 +5,7 @@
 package utils
 
 import (
+	context "context"
 	reflect "reflect"
 	schema "user/schema"
 
@@ -32,6 +33,34 @@ func NewMockIUserUtils(ctrl *gomock.Controller) *MockIUserUtils {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockIUserUtils) EXPECT() *MockIUserUtilsMockRecorder {
 	return m.recorder
+}
+
+// AuthenticateUser mocks base method.
+func (m *MockIUserUtils) AuthenticateUser(user schema.User, password string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AuthenticateUser", user, password)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// AuthenticateUser indicates an expected call of AuthenticateUser.
+func (mr *MockIUserUtilsMockRecorder) AuthenticateUser(user, password interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthenticateUser", reflect.TypeOf((*MockIUserUtils)(nil).AuthenticateUser), user, password)
+}
+
+// CheckEmailVerificationSession mocks base method.
+func (m *MockIUserUtils) CheckEmailVerificationSession(ctx context.Context, userID uint, event string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckEmailVerificationSession", ctx, userID, event)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckEmailVerificationSession indicates an expected call of CheckEmailVerificationSession.
+func (mr *MockIUserUtilsMockRecorder) CheckEmailVerificationSession(ctx, userID, event interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckEmailVerificationSession", reflect.TypeOf((*MockIUserUtils)(nil).CheckEmailVerificationSession), ctx, userID, event)
 }
 
 // CreateUser mocks base method.
@@ -94,6 +123,34 @@ func (mr *MockIUserUtilsMockRecorder) HashPassword(password interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HashPassword", reflect.TypeOf((*MockIUserUtils)(nil).HashPassword), password)
 }
 
+// MarkEmailVerified mocks base method.
+func (m *MockIUserUtils) MarkEmailVerified(email string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkEmailVerified", email)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkEmailVerified indicates an expected call of MarkEmailVerified.
+func (mr *MockIUserUtilsMockRecorder) MarkEmailVerified(email interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkEmailVerified", reflect.TypeOf((*MockIUserUtils)(nil).MarkEmailVerified), email)
+}
+
+// MarkMFAVerified mocks base method.
+func (m *MockIUserUtils) MarkMFAVerified(userID uint) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkMFAVerified", userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkMFAVerified indicates an expected call of MarkMFAVerified.
+func (mr *MockIUserUtilsMockRecorder) MarkMFAVerified(userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkMFAVerified", reflect.TypeOf((*MockIUserUtils)(nil).MarkMFAVerified), userID)
+}
+
 // RequestForgetpassVerificationEmail mocks base method.
 func (m *MockIUserUtils) RequestForgetpassVerificationEmail(userID uint, username, email string) error {
 	m.ctrl.T.Helper()
@@ -122,20 +179,6 @@ func (mr *MockIUserUtilsMockRecorder) RequestRegisterVerificationEmail(userID, u
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestRegisterVerificationEmail", reflect.TypeOf((*MockIUserUtils)(nil).RequestRegisterVerificationEmail), userID, username, email)
 }
 
-// SetUserEmailVerified mocks base method.
-func (m *MockIUserUtils) SetUserEmailVerified(email string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetUserEmailVerified", email)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetUserEmailVerified indicates an expected call of SetUserEmailVerified.
-func (mr *MockIUserUtilsMockRecorder) SetUserEmailVerified(email interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetUserEmailVerified", reflect.TypeOf((*MockIUserUtils)(nil).SetUserEmailVerified), email)
-}
-
 // StoreEncryptedTOTPSecret mocks base method.
 func (m *MockIUserUtils) StoreEncryptedTOTPSecret(userID uint, encryptedSecret string) error {
 	m.ctrl.T.Helper()
@@ -148,6 +191,21 @@ func (m *MockIUserUtils) StoreEncryptedTOTPSecret(userID uint, encryptedSecret s
 func (mr *MockIUserUtilsMockRecorder) StoreEncryptedTOTPSecret(userID, encryptedSecret interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreEncryptedTOTPSecret", reflect.TypeOf((*MockIUserUtils)(nil).StoreEncryptedTOTPSecret), userID, encryptedSecret)
+}
+
+// UpdatePassword mocks base method.
+func (m *MockIUserUtils) UpdatePassword(userID uint, hashedPassword string) (schema.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePassword", userID, hashedPassword)
+	ret0, _ := ret[0].(schema.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdatePassword indicates an expected call of UpdatePassword.
+func (mr *MockIUserUtilsMockRecorder) UpdatePassword(userID, hashedPassword interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePassword", reflect.TypeOf((*MockIUserUtils)(nil).UpdatePassword), userID, hashedPassword)
 }
 
 // ValidatePassword mocks base method.
