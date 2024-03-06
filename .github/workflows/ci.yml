@@ -1,8 +1,6 @@
 name: GiveGetGo CI Workflow
 
 on:
-  push:
-    branches: [ main, development ]
   pull_request:
     branches: [ main, development ]
 
@@ -114,4 +112,3 @@ jobs:
       run: |
         cd verification
         go build -v ./...
-  
