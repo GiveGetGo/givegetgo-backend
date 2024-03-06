@@ -42,11 +42,17 @@ jobs:
           echo "VERIFICATION_SERVICE_REPO_NAME=${{ secrets.AWS_ECR_VERIFICATION_SERVICE_REPO }}" >> $GITHUB_ENV
           echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
 
+      # Create .env files
+      - name: Create .env files
+        run: |
+          echo "${{ secrets.USER_ENV_CONTENTS }}" > ./servers/user/.env.user
+          echo "${{ secrets.VERIFICATION_ENV_CONTENTS }}" > ./servers/verification/.env.verification
+
       # Build and push user-service
       - name: Build and push user-service
         run: |
           ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          docker build -t $ECR_REGISTRY/$USER_SERIVCE_REPO_NAME:$IMAGE_TAG ./servers/user
+          docker build -t $ECR_REGISTRY/$USER_SERVICE_REPO_NAME:$IMAGE_TAG ./servers/user
           docker push $ECR_REGISTRY/$USER_SERVICE_REPO_NAME:$IMAGE_TAG
 
           # Build and push verification-service
