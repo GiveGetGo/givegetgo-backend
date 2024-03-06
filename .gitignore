@@ -3,5 +3,9 @@ client/node_modules
 client_web/node_modules
 
 # .env files
-server/.env.server
+servers/user/.env.user
+servers/verification/.env.verification
 .env
+
+# config files
+redis.conf

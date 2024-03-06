@@ -9,10 +9,10 @@ COPY go.mod go.sum ./
 # Download any necessary dependencies
 RUN go mod download
 
-# Copy the rest of the application's code
+# Copy the rest of the verification service's code
 COPY . .
 
-# Compile the application to /main.
+# Compile the verification service to /main.
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
 # Use a Docker multi-stage build to create a lean image
@@ -21,11 +21,11 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
+# Copy the .env file specific to the verification service
+COPY .env.verification /root/.env.verification
+
 # Copy the pre-built binary file from the previous stage
 COPY --from=builder /app/main .
-
-# Copy the .env file
-COPY .env.server /root/.env.server
 
 # Expose port 8080 to the outside world
 EXPOSE 8080

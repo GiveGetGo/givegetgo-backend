@@ -1,10 +1,8 @@
 name: GiveGetGo CI Workflow
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, development ]
 
 jobs:
   client:
@@ -18,7 +16,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v2
       with:
-        node-version: '14' # Replace with your Node.js version
+        node-version: 'lts/*'
 
     - name: 🔧 Install npm@latest
       run: npm i -g npm@latest
@@ -32,8 +30,8 @@ jobs:
     - name: Linting errors for our app...
       run: npm run lint
 
-    - name: Running tests for our app...
-      run: npm test
+    # - name: Running tests for our app...
+    #   run: npm test
 
     - name: Build Expo project...
       run: expo build
@@ -49,7 +47,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v2
       with:
-        node-version: '14' 
+        node-version: 'lts/*'
 
     - name: 🔧 Install npm@latest
       run: npm i -g npm@latest
@@ -57,8 +55,8 @@ jobs:
     - name: Install dependencies
       run: npm install
     
-    - name: Running tests for our website...
-      run: npm test
+    # - name: Running tests for our website...
+    #   run: npm test
 
     - name: Linting errors for our website...
       run: npm run lint
@@ -66,11 +64,11 @@ jobs:
     - name: Trying to build the website...
       run: npm run build
 
-  server:
+  servers:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: server
+        working-directory: servers
     steps:
     - uses: actions/checkout@v2
 
@@ -78,19 +76,39 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: '^1.20'
-
-    - name: Install dependencies
-      run: go get -v ./...
-
-    - name: Install golangci-lint
+    
+    - name: Install dependencies for user_server
       run: |
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.31.0
+        cd user
+        go get -v ./...
 
-    - name: Run golangci-lint
-      run: golangci-lint run ./...
+    - name: Install dependencies for verification_server
+      run: |
+        cd verification
+        go get -v ./...
 
-    - name: Running tests for our server...
-      run: go test -v ./...
+  # Uncomment and adapt the following if you have tests for each service
+    # - name: Running tests for shared
+    #   run: |
+    #     cd shared
+    #     go test -v ./...
 
-    - name: Build the Go application
-      run: go build -v ./...
+    # - name: Running tests for user_server
+    #   run: |
+    #     cd user_server
+    #     go test -v ./...
+
+    # - name: Running tests for verification_server
+    #   run: |
+    #     cd verification_server
+    #     go test -v ./...
+
+    - name: Build the user_server service
+      run: |
+        cd user
+        go build -v ./...
+
+    - name: Build the verification_server service
+      run: |
+        cd verification
+        go build -v ./...

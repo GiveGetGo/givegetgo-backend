@@ -1,32 +1,74 @@
 version: '3.8'
 services:
-  server: 
+  user-service:
     build:
-      context: ./server
+      context: ./servers/user
     ports:
-      - "8080:8080"
+      - "8081:8080"
     env_file:
-      - ./server/.env.server
+      - ./servers/user/.env.user
     restart: unless-stopped
     networks:
       - givegetgo-network
     depends_on:
-      - postgres
+      - user-postgres
+      - redis
 
-  postgres:
-    image: postgres
-    container_name: postgres
+  verification-service:
+    build:
+      context: ./servers/verification
     ports:
-      - "5432:5432"
+      - "8082:8080"
+    env_file:
+      - ./servers/verification/.env.verification
+    restart: unless-stopped
+    networks:
+      - givegetgo-network
+    depends_on:
+      - verification-postgres
+      - redis
+
+  user-postgres:
+    image: postgres
+    container_name: user-postgres
+    ports:
+      - "5433:5432"
     networks:
       - givegetgo-network
     env_file:
-      .env
+      - ./servers/user/.env.user
     volumes:
-      - postgres:/var/lib/postgresql/data
+      - user-postgres:/var/lib/postgresql/data
+
+  verification-postgres:
+    image: postgres
+    container_name: verification-postgres
+    ports:
+      - "5434:5432"
+    networks:
+      - givegetgo-network
+    env_file:
+      - ./servers/verification/.env.verification
+    volumes:
+      - verification-postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - givegetgo-network
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf 
+      - redis-data:/data
+    command:
+      redis-server /usr/local/etc/redis/redis.conf
 
 volumes:
-  postgres:
+  user-postgres:
+  verification-postgres:
+  redis-data:
 
 networks:
   givegetgo-network:

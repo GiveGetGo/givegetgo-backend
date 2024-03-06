@@ -6,9 +6,12 @@ type User struct {
 	UserID          uint `gorm:"primaryKey"`
 	UserName        string
 	Email           string
-	OAuthToken      string
+	HashedPassword  string
 	ProfileInfo     string
 	ReputationScore int
+	EmailVerified   bool
+	MFAVerified     bool
+	MFASecret       string
 	DateJoined      time.Time
 	LastActiveDate  time.Time
 }
