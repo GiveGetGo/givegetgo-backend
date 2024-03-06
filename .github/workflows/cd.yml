@@ -46,7 +46,7 @@ jobs:
       - name: Build and push user-service
         run: |
           ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          docker build -t $ECR_REGISTRY/$USER_SERIVCE_REPO_NAME:$IMAGE_TAG ./servers/user
+          docker build -t $ECR_REGISTRY/$USER_SERVICE_REPO_NAME:$IMAGE_TAG ./servers/user
           docker push $ECR_REGISTRY/$USER_SERVICE_REPO_NAME:$IMAGE_TAG
 
           # Build and push verification-service
