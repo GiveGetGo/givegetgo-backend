@@ -42,6 +42,12 @@ jobs:
           echo "VERIFICATION_SERVICE_REPO_NAME=${{ secrets.AWS_ECR_VERIFICATION_SERVICE_REPO }}" >> $GITHUB_ENV
           echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
 
+      # Create .env files
+      - name: Create .env files
+        run: |
+          echo "${{ secrets.USER_ENV_CONTENTS }}" > ./servers/user/.env.user
+          echo "${{ secrets.VERIFICATION_ENV_CONTENTS }}" > ./servers/verification/.env.verification
+
       # Build and push user-service
       - name: Build and push user-service
         run: |
