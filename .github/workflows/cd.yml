@@ -12,7 +12,7 @@ jobs:
     steps:
       # Checkout the repository
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       # Setup for deployment, e.g., configure AWS credentials
       - name: Configure AWS credentials
@@ -28,11 +28,11 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       # Determine which services have changed
-      - name: Check for changed services
-        id: changed_services
-        run: |
-          echo "::set-output name=user_service_changed::$(git diff --name-only ${{ github.sha }} ${{ github.event.before }} | grep -q 'servers/user' && echo 'true' || echo 'false')"
-          echo "::set-output name=verification_service_changed::$(git diff --name-only ${{ github.sha }} ${{ github.event.before }} | grep -q 'servers/verification' && echo 'true' || echo 'false')"
+      # - name: Check for changed services
+      #   id: changed_services
+      #   run: |
+      #     echo "::set-output name=user_service_changed::$(git diff --name-only ${{ github.sha }} ${{ github.event.before }} | grep -q 'servers/user' && echo 'true' || echo 'false')"
+      #     echo "::set-output name=verification_service_changed::$(git diff --name-only ${{ github.sha }} ${{ github.event.before }} | grep -q 'servers/verification' && echo 'true' || echo 'false')"
 
       # Set up Docker environment variables
       - name: Set up Docker environment variables
@@ -44,7 +44,6 @@ jobs:
 
       # Build and push user-service
       - name: Build and push user-service
-        if: steps.changed_services.outputs.user_service_changed == 'true'
         run: |
           ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           docker build -t $ECR_REGISTRY/$USER_SERIVCE_REPO_NAME:$IMAGE_TAG ./servers/user
@@ -52,7 +51,6 @@ jobs:
 
           # Build and push verification-service
       - name: Build and push verification-service
-        if: steps.changed_services.outputs.verification_service_changed == 'true'
         run: |
           ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           docker build -t $ECR_REGISTRY/$VERIFICATION_SERVICE_REPO_NAME:$IMAGE_TAG ./servers/verification
