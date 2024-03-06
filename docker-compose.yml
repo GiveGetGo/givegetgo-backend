@@ -2,16 +2,30 @@ version: '3.8'
 services:
   user-service:
     build:
-      context: ./server/user_server
+      context: ./servers/user
     ports:
       - "8081:8080"
     env_file:
-      - ./server/user_server/.env.user
+      - ./servers/user/.env.user
     restart: unless-stopped
     networks:
       - givegetgo-network
     depends_on:
       - user-postgres
+      - redis
+
+  verification-service:
+    build:
+      context: ./servers/verification
+    ports:
+      - "8082:8080"
+    env_file:
+      - ./servers/verification/.env.verification
+    restart: unless-stopped
+    networks:
+      - givegetgo-network
+    depends_on:
+      - verification-postgres
       - redis
 
   user-postgres:
@@ -22,23 +36,9 @@ services:
     networks:
       - givegetgo-network
     env_file:
-      - ./server/user_server/.env.user
+      - ./servers/user/.env.user
     volumes:
       - user-postgres:/var/lib/postgresql/data
-
-  verification-service:
-    build:
-      context: ./server/verification_server
-    ports:
-      - "8082:8080"
-    env_file:
-      - ./server/verification_server/.env.verification
-    restart: unless-stopped
-    networks:
-      - givegetgo-network
-    depends_on:
-      - verification-postgres
-      - redis
 
   verification-postgres:
     image: postgres
@@ -48,7 +48,7 @@ services:
     networks:
       - givegetgo-network
     env_file:
-      - ./server/verification_server/.env.verification
+      - ./servers/verification/.env.verification
     volumes:
       - verification-postgres:/var/lib/postgresql/data
 
@@ -59,8 +59,6 @@ services:
       - "6379:6379"
     networks:
       - givegetgo-network
-    env_file:
-      - ./server/shared/redis/.env.redis
     volumes:
       - ./redis.conf:/usr/local/etc/redis/redis.conf 
       - redis-data:/data
