@@ -38,20 +38,175 @@ jobs:
       - name: Set up Docker environment variables
         run: |
           echo "ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com" >> $GITHUB_ENV
-          echo "USER_SERVICE_REPO_NAME=${{ secrets.AWS_ECR_USER_SERVICE_REPO }}" >> $GITHUB_ENV
-          echo "VERIFICATION_SERVICE_REPO_NAME=${{ secrets.AWS_ECR_VERIFICATION_SERVICE_REPO }}" >> $GITHUB_ENV
-          echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
+          echo "NGINX_REPO_NAME=${{ secrets.AWS_ECR_NGINX_REPO }}" >> $GITHUB_ENV
+          echo "GIVEGETGO_REPO_NAME=${{ secrets.AWS_ECR_GIVEGETGO_REPO }}" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)" >> $GITHUB_ENV"
+
+      # Build and push nginx:
+      - name: Build and push nginx
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$NGINX_REPO_NAME:$IMAGE_TAG ./nginx
+          docker push $ECR_REGISTRY/$NGINX_REPO_NAME:$IMAGE_TAG
 
       # Build and push user-service
       - name: Build and push user-service
         run: |
           ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          docker build -t $ECR_REGISTRY/$USER_SERIVCE_REPO_NAME:$IMAGE_TAG ./servers/user
-          docker push $ECR_REGISTRY/$USER_SERVICE_REPO_NAME:$IMAGE_TAG
+          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:$user-IMAGE_TAG ./servers/user
+          docker push $ECR_REGISTRY/GIVEGETGO_REPO_NAME:user-$IMAGE_TAG
 
-          # Build and push verification-service
+      # Build and push verification-service
       - name: Build and push verification-service
         run: |
           ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          docker build -t $ECR_REGISTRY/$VERIFICATION_SERVICE_REPO_NAME:$IMAGE_TAG ./servers/verification
-          docker push $ECR_REGISTRY/$VERIFICATION_SERVICE_REPO_NAME:$IMAGE_TAG
+          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:verification-$IMAGE_TAG ./servers/verification
+          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:verification-$IMAGE_TAG
+        
+      # Build and push post-service
+      - name: Build and push post-service
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:post-$IMAGE_TAG ./servers/post
+          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:post-$IMAGE_TAG
+      
+      # Build and push match-service
+      - name: Build and push match-service
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:$IMAGE_TAG ./servers/match
+          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:match$IMAGE_TAG
+
+      # Build and push bid-service
+      - name: Build and push bid-service
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:bid-$IMAGE_TAG ./servers/bid
+          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:bid-$IMAGE_TAG
+
+      # Build and push redis
+      - name: Build and push redis
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:redis-$IMAGE_TAG ./servers/redis
+          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:redis-$IMAGE_TAG
+
+      # Update Helm chart repo and tag
+      - name: Update nginx Helm chart
+        run: |
+          helm upgrade --install nginx /charts/nginx \
+            --set image.repository=$ECR_REGISTRY/$NGINX_REPO_NAME \
+            --set image.tag=$IMAGE_TAG
+
+      - name: Update user Helm chart
+        run: |
+          helm upgrade --install user /charts/user \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=user-$IMAGE_TAG
+
+      - name: Update verification Helm chart
+        run: |
+          helm upgrade --install verification /charts/verification \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=verification-$IMAGE_TAG
+
+      - name: Update post Helm chart
+        run: |
+          helm upgrade --install post /charts/post \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=post-$IMAGE_TAG
+
+      - name: Update bid Helm chart
+        run: |
+          helm upgrade --install bid /charts/bid \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=bid-$IMAGE_TAG
+        
+      - name: Update match Helm chart
+        run: |
+          helm upgrade --install match /charts/match \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=match-$IMAGE_TAG
+
+      # Update Helm chart repo and tag for the each postgres service
+      - name: Update user-postgres Helm chart
+        run: |
+          helm upgrade --install user-postgres /charts/user/charts/user-postgres \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=user-postgres-$IMAGE_TAG
+          
+      - name: Update verification-postgres Helm chart
+        run: |
+          helm upgrade --install verification-postgres /charts/verification/charts/verification-postgres \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=verification-postgres-$IMAGE_TAG
+        
+      - name: Update post-postgres Helm chart
+        run: |
+          helm upgrade --install post-postgres /charts/post/charts/post-postgres \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=post-postgres-$IMAGE_TAG
+      
+      - name: Update bid-postgres Helm chart
+        run: |
+          helm upgrade --install bid-postgres /charts/bid/charts/bid-postgres \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=bid-postgres-$IMAGE_TAG
+
+      - name: Update match-postgres Helm chart
+        run: |
+          helm upgrade --install match-postgres /charts/match/charts/match-postgres \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=match-postgres-$IMAGE_TAG
+
+      # Update EKS kube config
+      - name: Update EKS config
+        run: |
+          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }}
+
+      # Update postgres credentials for each service and redis
+      - name: Update user-postgres credentials
+        run: |
+          kubectl create secret generic user-postgres-credentials \
+            --from-literal=postgres-db=${{ secrets.AWS_EKS_USER_POSTGRES_DB }} \
+            --from-literal=postgres-user=${{ secrets.AWS_EKS_USER_POSTGRES_USER }} \
+            --from-literal=postgres-password=${{ secrets.AWS_EKS_USER_POSTGRES_PASSWORD }} \
+            --namespace=${{ secrets.AWS_EKS_USER_POSTGRES_NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+      
+      - name: Update verification-postgres credentials
+        run: |
+          kubectl create secret generic verification-postgres-credentials \
+            --from-literal=postgres-db=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_DB }} \
+            --from-literal=postgres-user=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_USER }} \
+            --from-literal=postgres-password=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_PASSWORD }} \
+            --namespace=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+      
+      - name: Update post-postgres credentials
+        run: |
+          kubectl create secret generic post-postgres-credentials \
+            --from-literal=postgres-db=${{ secrets.AWS_EKS_POST_POSTGRES_DB }} \
+            --from-literal=postgres-user=${{ secrets.AWS_EKS_POST_POSTGRES_USER }} \
+            --from-literal=postgres-password=${{ secrets.AWS_EKS_POST_POSTGRES_PASSWORD}} \
+            --namespace=${{ secrets.AWS_EKS_BID_POSTGRES_NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+      
+      - name: Update bid-postgres credentials
+        run: |
+          kubectl create secret generic bid-postgres-credentials \
+            --from-literal=postgres-db=${{ secrets.AWS_EKS_BID_POSTGRES_DB }} \
+            --from-literal=postgres-user=${{ secrets.AWS_EKS_BID_POSTGRES_USER }} \
+            --from-literal=postgres-password=${{ secrets.AWS_EKS_BID_POSTGRES_PASSWORD }} \
+            --namespace=${{ secrets.AWS_EKS_BID_POSTGRES_NAMESPACE}} \
+            --dry-run=client -o yaml | kubectl apply -f -
+        
+      - name: Update match-postgres credentials
+        run: |
+          kubectl create secret generic match-postgres-credentials \
+            --from-literal=postgres-db=${{ secrets.AWS_EKS_MATCH_POSTGRES_DB }} \
+            --from-literal=postgres-user=${{ secrets.AWS_EKS_MATCH_POSTGRES_USER }} \
+            --from-literal=postgres-password=${{ secrets.AWS_EKS_MATCH_POSTGRES_PASSWORD }} \
+            --namespace=${{ secrets.AWS_EKS_MATCH_POSTGRES_NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+      
