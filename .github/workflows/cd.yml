@@ -164,49 +164,47 @@ jobs:
         run: |
           aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }}
 
-      # Update postgres credentials for each service and redis
-      - name: Update user-postgres credentials
+      # Decode env files for user-service and user-postgres
+      - name: Decode Environment File and Create Secret for user-service
         run: |
-          kubectl create secret generic user-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_USER_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_USER_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_USER_POSTGRES_PASSWORD }} \
-            --namespace=${{ secrets.AWS_EKS_USER_POSTGRES_NAMESPACE }} \
-            --dry-run=client -o yaml | kubectl apply -f -
+          echo "${{ secrets.USER_SERVICE_ENV }}" | base64 -d > ./user-service.env
+          kubectl create secret generic user-secrets --from-env-file=./user-service.env --namespace givegetgo-user
+          echo "${{ secrets.USER_POSTGRES_ENV }}" | base64 -d > ./user-postgres.env
+          kubectl create secret generic user-postgres-secrets --from-env-file=./user-postgres.env --namespace givegetgo-user
+        shell: bash
+
+      # Decode env files for verification-service and verification-postgres
+      - name: Decode Environment File and Create Secret for verification-service
+        run: |
+          echo "${{ secrets.VERIFICATION_SERVICE_ENV }}" | base64 -d > ./verification-service.env
+          kubectl create secret generic verification-secrets --from-env-file=./verification-service.env --namespace givegetgo-verification
+          echo "${{ secrets.VERIFICATION_POSTGRES_ENV }}" | base64 -d > ./verification-postgres.env
+          kubectl create secret generic verification-postgres-secrets --from-env-file=./verification-postgres.env --namespace givegetgo-verification
+        shell: bash
+
+      # Decode env files for post-service and post-postgres
+      - name: Decode Environment File and Create Secret for post-service
+        run: |
+          echo "${{ secrets.POST_SERVICE_ENV }}" | base64 -d > ./post-service.env
+          kubectl create secret generic post-secrets --from-env-file=./post-service.env --namespace givegetgo-post
+          echo "${{ secrets.POST_POSTGRES_ENV }}" | base64 -d > ./post-postgres.env
+          kubectl create secret generic post-postgres-secrets --from-env-file=./post-postgres.env --namespace givegetgo-post
+        shell: bash
+
+      # Decode env files for bid-service and bid-postgres
+      - name: Decode Environment File and Create Secret for bid-service
+        run: |
+          echo "${{ secrets.BID_SERVICE_ENV }}" | base64 -d > ./bid-service.env
+          kubectl create secret generic bid-secrets --from-env-file=./bid-service.env --namespace givegetgo-bid
+          echo "${{ secrets.BID_POSTGRES_ENV }}" | base64 -d > ./bid-postgres.env
+          kubectl create secret generic bid-postgres-secrets --from-env-file=./bid-postgres.env --namespace givegetgo-bid
+        shell: bash
       
-      - name: Update verification-postgres credentials
+      # Decode env files for match-service and match-postgres
+      - name: Decode Environment File and Create Secret for match-service
         run: |
-          kubectl create secret generic verification-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_PASSWORD }} \
-            --namespace=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_NAMESPACE }} \
-            --dry-run=client -o yaml | kubectl apply -f -
-      
-      - name: Update post-postgres credentials
-        run: |
-          kubectl create secret generic post-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_POST_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_POST_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_POST_POSTGRES_PASSWORD}} \
-            --namespace=${{ secrets.AWS_EKS_BID_POSTGRES_NAMESPACE }} \
-            --dry-run=client -o yaml | kubectl apply -f -
-      
-      - name: Update bid-postgres credentials
-        run: |
-          kubectl create secret generic bid-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_BID_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_BID_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_BID_POSTGRES_PASSWORD }} \
-            --namespace=${{ secrets.AWS_EKS_BID_POSTGRES_NAMESPACE}} \
-            --dry-run=client -o yaml | kubectl apply -f -
-        
-      - name: Update match-postgres credentials
-        run: |
-          kubectl create secret generic match-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_MATCH_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_MATCH_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_MATCH_POSTGRES_PASSWORD }} \
-            --namespace=${{ secrets.AWS_EKS_MATCH_POSTGRES_NAMESPACE }} \
-            --dry-run=client -o yaml | kubectl apply -f -
-      
+          echo "${{ secrets.MATCH_SERVICE_ENV }}" | base64 -d > ./match-service.env
+          kubectl create secret generic match-secrets --from-env-file=./match-service.env --namespace givegetgo-match
+          echo "${{ secrets.MATCH_POSTGRES_ENV }}" | base64 -d > ./match-postgres.env
+          kubectl create secret generic match-postgres-secrets --from-env-file=./match-postgres.env --namespace givegetgo-match
+        shell: bash

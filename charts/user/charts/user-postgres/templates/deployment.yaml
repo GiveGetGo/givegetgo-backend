@@ -21,17 +21,17 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ include "user-postgres.fullname" . }}-secret
-                  key: postgres-db
+                  key: USER_POSTGRES_DB
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: {{ include "user-postgres.fullname" . }}-secret
-                  key: postgres-user
+                  key: USER_POSTGRES_USER
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "user-postgres.fullname" . }}-secret
-                  key: postgres-password
+                  key: USER_POSTGRES_PASSWORD
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
               name: postgres-storage
