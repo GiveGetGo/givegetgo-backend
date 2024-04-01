@@ -1,14 +1,14 @@
-name: GiveGetGo CD Workflow for Production
+name: GiveGetGo CD Workflow for Development
 
 on:
   push:
     branches:
-      - main
+      - development
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/development'
     steps:
       # Checkout the repository
       - name: Checkout
@@ -40,7 +40,7 @@ jobs:
           echo "ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com" >> $GITHUB_ENV
           echo "NGINX_REPO_NAME=${{ secrets.AWS_ECR_NGINX_REPO }}" >> $GITHUB_ENV
           echo "GIVEGETGO_REPO_NAME=${{ secrets.AWS_ECR_GIVEGETGO_REPO }}" >> $GITHUB_ENV
-          echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
+          echo "IMAGE_TAG=dev-$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
 
       # Build and push nginx:
       - name: Build and push nginx
@@ -158,55 +158,4 @@ jobs:
           helm upgrade --install match-postgres /charts/match/charts/match-postgres \
             --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
             --set image.tag=match-postgres-$IMAGE_TAG
-
-      # Update EKS kube config
-      - name: Update EKS config
-        run: |
-          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }}
-
-      # Update postgres credentials for each service and redis
-      - name: Update user-postgres credentials
-        run: |
-          kubectl create secret generic user-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_USER_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_USER_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_USER_POSTGRES_PASSWORD }} \
-            --namespace=${{ secrets.AWS_EKS_USER_POSTGRES_NAMESPACE }} \
-            --dry-run=client -o yaml | kubectl apply -f -
-      
-      - name: Update verification-postgres credentials
-        run: |
-          kubectl create secret generic verification-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_PASSWORD }} \
-            --namespace=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_NAMESPACE }} \
-            --dry-run=client -o yaml | kubectl apply -f -
-      
-      - name: Update post-postgres credentials
-        run: |
-          kubectl create secret generic post-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_POST_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_POST_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_POST_POSTGRES_PASSWORD}} \
-            --namespace=${{ secrets.AWS_EKS_BID_POSTGRES_NAMESPACE }} \
-            --dry-run=client -o yaml | kubectl apply -f -
-      
-      - name: Update bid-postgres credentials
-        run: |
-          kubectl create secret generic bid-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_BID_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_BID_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_BID_POSTGRES_PASSWORD }} \
-            --namespace=${{ secrets.AWS_EKS_BID_POSTGRES_NAMESPACE}} \
-            --dry-run=client -o yaml | kubectl apply -f -
-        
-      - name: Update match-postgres credentials
-        run: |
-          kubectl create secret generic match-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_MATCH_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_MATCH_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_MATCH_POSTGRES_PASSWORD }} \
-            --namespace=${{ secrets.AWS_EKS_MATCH_POSTGRES_NAMESPACE }} \
-            --dry-run=client -o yaml | kubectl apply -f -
       
