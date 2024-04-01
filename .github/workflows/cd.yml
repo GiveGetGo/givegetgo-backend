@@ -1,4 +1,4 @@
-name: GiveGetGo CD Workflow for Development
+name: GiveGetGo CD Workflow for Production
 
 on:
   push:
@@ -145,28 +145,99 @@ jobs:
 
       - name: Generate environment files for Docker Compose
         run: |
-          echo "${{ secrets.REDIS_ENV }}" | base64 -d > "./redis/.env.redis"
+          echo "ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com" >> $GITHUB_ENV
+          echo "NGINX_REPO_NAME=${{ secrets.AWS_ECR_NGINX_REPO }}" >> $GITHUB_ENV
+          echo "GIVEGETGO_REPO_NAME=${{ secrets.AWS_ECR_GIVEGETGO_REPO }}" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
 
-          services=("user" "verification" "post" "bid" "match")
-          for service in "${services[@]}"; do
-            # Construct the name of the environment variable
-            service_env_var_name="${service^^}_SERVICE_ENV"
+      # Build and push nginx:
+      - name: Build and push nginx
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$NGINX_REPO_NAME:$IMAGE_TAG ./nginx
+          docker push $ECR_REGISTRY/$NGINX_REPO_NAME:$IMAGE_TAG
+
+      # Build and push user-service
+      - name: Build and push user-service
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:$user-IMAGE_TAG ./servers/user
+          docker push $ECR_REGISTRY/GIVEGETGO_REPO_NAME:user-$IMAGE_TAG
+
+      # Build and push verification-service
+      - name: Build and push verification-service
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:verification-$IMAGE_TAG ./servers/verification
+          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:verification-$IMAGE_TAG
         
-            # Use the variable names to retrieve the secret values directly from the environment
-            service_secret="${!service_env_var_name}"
+      # Build and push post-service
+      - name: Build and push post-service
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:post-$IMAGE_TAG ./servers/post
+          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:post-$IMAGE_TAG
+      
+      # Build and push match-service
+      - name: Build and push match-service
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:$IMAGE_TAG ./servers/match
+          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:match$IMAGE_TAG
+
+      # Build and push bid-service
+      - name: Build and push bid-service
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:bid-$IMAGE_TAG ./servers/bid
+          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:bid-$IMAGE_TAG
+
+      # Build and push redis
+      - name: Build and push redis
+        run: |
+          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:redis-$IMAGE_TAG ./servers/redis
+          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:redis-$IMAGE_TAG
+
+      # Update Helm chart repo and tag
+      - name: Update nginx Helm chart
+        run: |
+          helm upgrade --install nginx /charts/nginx \
+            --set image.repository=$ECR_REGISTRY/$NGINX_REPO_NAME \
+            --set image.tag=$IMAGE_TAG
+
+      - name: Update user Helm chart
+        run: |
+          helm upgrade --install user /charts/user \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=user-$IMAGE_TAG
+
+      - name: Update verification Helm chart
+        run: |
+          helm upgrade --install verification /charts/verification \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=verification-$IMAGE_TAG
+
+      - name: Update post Helm chart
+        run: |
+          helm upgrade --install post /charts/post \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=post-$IMAGE_TAG
+
+      - name: Update bid Helm chart
+        run: |
+          helm upgrade --install bid /charts/bid \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=bid-$IMAGE_TAG
         
-            # Decode the environment variable and write to a file
-            echo "$service_secret" | base64 -d > "./servers/$service/.env"
-          done
-        env:
-          USER_SERVICE_ENV: ${{ secrets.USER_SERVICE_ENV }}
-          VERIFICATION_SERVICE_ENV: ${{ secrets.VERIFICATION_SERVICE_ENV }}
-          POST_SERVICE_ENV: ${{ secrets.POST_SERVICE_ENV }}
-          BID_SERVICE_ENV: ${{ secrets.BID_SERVICE_ENV }}
-          MATCH_SERVICE_ENV: ${{ secrets.MATCH_SERVICE_ENV }}
-     
-      # Build and push Docker images
-      - name: Build and push Docker images
+      - name: Update match Helm chart
+        run: |
+          helm upgrade --install match /charts/match \
+            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+            --set image.tag=match-$IMAGE_TAG
+
+      # Update Helm chart repo and tag for the each postgres service
+      - name: Update user-postgres Helm chart
         run: |
           declare -a services=("nginx" "user" "verification" "post" "bid" "match" "redis")
 
