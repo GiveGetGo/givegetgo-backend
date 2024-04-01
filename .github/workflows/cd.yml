@@ -287,135 +287,47 @@ jobs:
         run: |
           aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }}
 
-
-      - name: Decode and create secrets for all services and their PostgreSQL
-        env:
-          USER_POSTGRES_ENV: ${{ secrets.USER_POSTGRES_ENV }}
-          VERIFICATION_POSTGRES_ENV: ${{ secrets.VERIFICATION_POSTGRES_ENV }}
-          POST_POSTGRES_ENV: ${{ secrets.POST_POSTGRES_ENV }}
-          BID_POSTGRES_ENV: ${{ secrets.BID_POSTGRES_ENV }}
-          MATCH_POSTGRES_ENV: ${{ secrets.MATCH_POSTGRES_ENV }}
+      # Decode env files for user-service and user-postgres
+      - name: Decode Environment File and Create Secret for user-service
         run: |
-          services=("user" "verification" "post" "bid" "match")
-          namespace="givegetgo-development"
-          
-          for service in "${services[@]}"; do
-              postgres_env_var_name="${service^^}_POSTGRES_ENV"
-            
-              postgres_secret=$(printenv $postgres_env_var_name)
-            
-              echo "$postgres_secret" | base64 -d > "./$service-postgres.env"
-              
-              if kubectl get secret givegetgo-${service}-postgres-secret -n $namespace &> /dev/null; then
-                  # Secret exists, check if it needs to be updated
-                  existing_secret=$(kubectl get secret givegetgo-${service}-postgres-secret -n $namespace -o jsonpath='{.data}')
-                  
-                  new_secret=$(cat ./$service-postgres.env | base64)
-                  
-                  if [ "$existing_secret" != "$new_secret" ]; then
-                      echo "Updating existing secret givegetgo-${service}-postgres-secret because the content has changed."
-                      kubectl create secret generic givegetgo-${service}-postgres-secret --from-env-file=./$service-postgres.env --namespace $namespace --dry-run=client -o yaml | kubectl apply -f -
-                  else
-                      echo "Secret givegetgo-${service}-postgres-secret is up to date. No changes needed."
-                  fi
-              else
-                  # Secret does not exist, create it
-                  echo "Creating secret givegetgo-${service}-postgres-secret."
-                  kubectl create secret generic givegetgo-${service}-postgres-secret --from-env-file=./$service-postgres.env --namespace $namespace
-              fi
-          done
+          echo "${{ secrets.USER_SERVICE_ENV }}" | base64 -d > ./user-service.env
+          kubectl create secret generic user-secrets --from-env-file=./user-service.env --namespace givegetgo-user
+          echo "${{ secrets.USER_POSTGRES_ENV }}" | base64 -d > ./user-postgres.env
+          kubectl create secret generic user-postgres-secrets --from-env-file=./user-postgres.env --namespace givegetgo-user
         shell: bash
-    
-      # Create or update the ConfigMap with the current secrets version
-      - name: Update ConfigMap with secrets version
-        run: |
-          # This command creates or updates a ConfigMap named 'givegetgo-secrets-version'
-          kubectl create configmap givegetgo-secrets-version \
-            --from-literal=version=${{ secrets.SECRETS_VERSION }} \
-            --namespace givegetgo-development \
-            --dry-run=client -o yaml | kubectl apply -f -
 
-  # Update ArgoCD applications
-  update-argocd-apps:
-    runs-on: ubuntu-latest
-    needs: [deploy-images-ecr, create-eks-secrets, check-code-changes, check-secrets-changes]
-    if: |
-      github.ref == 'refs/heads/main' &&
-      (
-        needs.check-code-changes.outputs.nginx-changed == 'true' ||
-        needs.check-code-changes.outputs.user-changed == 'true' ||
-        needs.check-code-changes.outputs.verification-changed == 'true' ||
-        needs.check-code-changes.outputs.post-changed == 'true' ||
-        needs.check-code-changes.outputs.bid-changed == 'true' ||
-        needs.check-code-changes.outputs.match-changed == 'true' ||
-        needs.check-code-changes.outputs.redis-changed == 'true' ||
-        needs.check-secrets-changes.outputs.secrets-changed == 'true'
-      )
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # Decode env files for verification-service and verification-postgres
+      - name: Decode Environment File and Create Secret for verification-service
+        run: |
+          echo "${{ secrets.VERIFICATION_SERVICE_ENV }}" | base64 -d > ./verification-service.env
+          kubectl create secret generic verification-secrets --from-env-file=./verification-service.env --namespace givegetgo-verification
+          echo "${{ secrets.VERIFICATION_POSTGRES_ENV }}" | base64 -d > ./verification-postgres.env
+          kubectl create secret generic verification-postgres-secrets --from-env-file=./verification-postgres.env --namespace givegetgo-verification
+        shell: bash
+
+      # Decode env files for post-service and post-postgres
+      - name: Decode Environment File and Create Secret for post-service
+        run: |
+          echo "${{ secrets.POST_SERVICE_ENV }}" | base64 -d > ./post-service.env
+          kubectl create secret generic post-secrets --from-env-file=./post-service.env --namespace givegetgo-post
+          echo "${{ secrets.POST_POSTGRES_ENV }}" | base64 -d > ./post-postgres.env
+          kubectl create secret generic post-postgres-secrets --from-env-file=./post-postgres.env --namespace givegetgo-post
+        shell: bash
+
+      # Decode env files for bid-service and bid-postgres
+      - name: Decode Environment File and Create Secret for bid-service
+        run: |
+          echo "${{ secrets.BID_SERVICE_ENV }}" | base64 -d > ./bid-service.env
+          kubectl create secret generic bid-secrets --from-env-file=./bid-service.env --namespace givegetgo-bid
+          echo "${{ secrets.BID_POSTGRES_ENV }}" | base64 -d > ./bid-postgres.env
+          kubectl create secret generic bid-postgres-secrets --from-env-file=./bid-postgres.env --namespace givegetgo-bid
+        shell: bash
       
-      # Install ArgoCD CLI
-      - name: Install ArgoCD CLI
+      # Decode env files for match-service and match-postgres
+      - name: Decode Environment File and Create Secret for match-service
         run: |
-          curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-          sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
-          rm argocd-linux-amd64 
-
-      # Patch ArgoCD application to deploy the latest images
-      - name: Patch ArgoCD application
-        run: |
-          argocd login ${{ secrets.ARGOCD_SERVER }} --username ${{ secrets.ARGOCD_ADMIN }} --password ${{ secrets.ARGOCD_PASSWORD }} --insecure
-
-      # Update ArgoCD applications with new image repo and tag
-      - name: Update ArgoCD applications with new image repo and tag
-        env:
-          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          NGINX_REPO_NAME: ${{ secrets.AWS_ECR_NGINX_REPO }}
-          GIVEGETGO_REPO_NAME: ${{ secrets.AWS_ECR_GIVEGETGO_REPO }}
-          IMAGE_TAG: ${{ needs.deploy-images-ecr.outputs.image-tag }}
-          POSTGRES_IMAGE_REPO: docker.io/postgres
-          POSTGRES_IMAGE_TAG: latest
-          NGINX_CHANGED: ${{ needs.check-code-changes.outputs.nginx-changed }}
-          REDIS_CHANGED: ${{ needs.check-code-changes.outputs.redis-changed }}
-          USER_CHANGED: ${{ needs.check-code-changes.outputs.user-changed }}
-          VERIFICATION_CHANGED: ${{ needs.check-code-changes.outputs.verification-changed }}
-          POST_CHANGED: ${{ needs.check-code-changes.outputs.post-changed }}
-          BID_CHANGED: ${{ needs.check-code-changes.outputs.bid-changed }}
-          MATCH_CHANGED: ${{ needs.check-code-changes.outputs.match-changed }}
-          SECRETS_CHANGED: ${{ needs.check-secrets-changes.outputs.secrets-changed }}
-        run: |
-          if [ "$NGINX_CHANGED" == "true" ] || [ "$SECRET_CHANGED" = "true" ]; then
-            argocd app set givegetgo-backend-nginx \
-              --helm-set image.repository="$ECR_REGISTRY/$NGINX_REPO_NAME" \
-              --helm-set image.tag="nginx-$IMAGE_TAG"
-          fi
-
-          if [ "$REDIS_CHANGED" == "true" ] || [ "$SECRET_CHANGED" = "true" ]; then
-            argocd app set givegetgo-backend-redis \
-              --helm-set image.repository="$ECR_REGISTRY/$GIVEGETGO_REPO_NAME" \
-              --helm-set image.tag="redis-$IMAGE_TAG"
-          fi
-
-          for service in user verification post bid match; do
-            SERVICE_CHANGED="${service^^}_CHANGED"
-            if [ "${!SERVICE_CHANGED}" == "true" ] || [ "$SECRET_CHANGED" = "true" ]; then
-              # Construct the image repo and tag for the service
-              APP_NAME="givegetgo-$service-backend"
-              SERVICE_IMAGE_REPO="$ECR_REGISTRY/$GIVEGETGO_REPO_NAME"
-              SERVICE_IMAGE_TAG="${service}-$IMAGE_TAG"
-
-              # Update the application in Argo CD
-              argocd app set $APP_NAME \
-                --helm-set image.repository="$SERVICE_IMAGE_REPO" \
-                --helm-set image.tag="$SERVICE_IMAGE_TAG"
-            fi
-          done
-
-          for service in user-postgres post-postgres verification-postgres bid-postgres match-postgres; do
-            APP_NAME="givegetgo-$service"
-            argocd app set $APP_NAME \
-              --helm-set image.repository="$POSTGRES_IMAGE_REPO" \
-              --helm-set image.tag="$POSTGRES_IMAGE_TAG"
-          done
+          echo "${{ secrets.MATCH_SERVICE_ENV }}" | base64 -d > ./match-service.env
+          kubectl create secret generic match-secrets --from-env-file=./match-service.env --namespace givegetgo-match
+          echo "${{ secrets.MATCH_POSTGRES_ENV }}" | base64 -d > ./match-postgres.env
+          kubectl create secret generic match-postgres-secrets --from-env-file=./match-postgres.env --namespace givegetgo-match
         shell: bash

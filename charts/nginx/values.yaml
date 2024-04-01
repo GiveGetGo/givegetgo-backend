@@ -45,11 +45,13 @@ service:
 ingress:
   enabled: ture
   className: "nginx"
+  enabled: ture
+  className: "nginx"
   annotations: {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
   hosts:
-    - host: "api.givegetgo.xyz"
+    - host: "givegetgo.xyz"
       paths:
         - path: /
           pathType: ImplementationSpecific
