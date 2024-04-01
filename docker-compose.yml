@@ -4,7 +4,7 @@ services:
     build:
       context: ./nginx
     ports:
-      - "80:80"
+      - "8080:80"
     restart: unless-stopped
     networks:
       - givegetgo-network
