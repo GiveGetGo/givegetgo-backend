@@ -4,7 +4,7 @@ services:
     build:
       context: ./nginx
     ports:
-      - "80:80"
+      - "8080:80"
     restart: unless-stopped
     networks:
       - givegetgo-network
@@ -132,11 +132,11 @@ services:
       - "6379:6379"
     networks:
       - givegetgo-network
+    env_file:
+      - ./redis/.env.redis
     volumes:
       - ./redis.conf:/usr/local/etc/redis/redis.conf 
       - redis-data:/data
-    command:
-      redis-server /usr/local/etc/redis/redis.conf
 
 volumes:
   user-postgres:

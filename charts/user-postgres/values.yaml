@@ -1,4 +1,4 @@
-# Default values for redis.
+# Default values for user-postgres.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -40,7 +40,7 @@ securityContext: {}
 
 service:
   type: ClusterIP
-  port: 6379
+  port: 80
 
 ingress:
   enabled: false
@@ -85,6 +85,11 @@ autoscaling:
   maxReplicas: 100
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
+
+postgres:
+  db: ""
+  user: ""
+  password: ""
 
 persistence:
   enabled: true

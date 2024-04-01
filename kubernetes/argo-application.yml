@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/GiveGetGo/givegetgo-backend
+    repoURL: https://github.com/GiveGetGo/givegetgo-backend.git
     path: kubernetes
     targetRevision: main
   destination:

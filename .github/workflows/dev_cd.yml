@@ -3,13 +3,13 @@ name: GiveGetGo CD Workflow for Development
 on:
   push:
     branches:
-      - main
+      - development
 
 jobs:
   # Build and push Docker images to ECR
   deploy-images-ecr:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/development'
     env:
       ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
       NGINX_REPO_NAME: ${{ secrets.AWS_ECR_NGINX_REPO }}
@@ -50,14 +50,11 @@ jobs:
 
           services=("user" "verification" "post" "bid" "match")
           for service in "${services[@]}"; do
-            # Construct the name of the environment variable
             service_env_var_name="${service^^}_SERVICE_ENV"
-        
-            # Use the variable names to retrieve the secret values directly from the environment
             service_secret="${!service_env_var_name}"
         
             # Decode the environment variable and write to a file
-            echo "$service_secret" | base64 -d > "./servers/$service/.env"
+            echo "$service_secret" | base64 -d > "./servers/$service/.env.$service"
           done
         env:
           USER_SERVICE_ENV: ${{ secrets.USER_SERVICE_ENV }}
@@ -103,7 +100,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+      
       # Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -165,11 +162,11 @@ jobs:
         run: |
           argocd app set nginx \
             --helm-set images.repo="$ECR_REGISTRY/$NGINX_REPO_NAME" \
-            --helm-set images.tag="nginx-$IMAGE_TAG"
+            --helm-set images.tag="dev-nginx-$IMAGE_TAG"
 
           for service in user verification post bid match redis; do
             # Construct the image repo and tag for the service
-            APP_NAME="givegetgo-backend-$service"
+            APP_NAME="dev-givegetgo-backend-$service"
             IMAGE_REPO="$ECR_REGISTRY/$GIVEGETGO_REPO_NAME"
             IMAGE_TAG="${service}-$IMAGE_TAG"
 
@@ -186,7 +183,7 @@ jobs:
             PG_IMAGE_TAG="${service}-$IMAGE_TAG"
       
             # Update the application in Argo CD
-            argocd app set "givegetgo-$service" \
+            argocd app set "dev-givegetgo-$service" \
               --helm-set images.repo="$PG_IMAGE_REPO" \
               --helm-set images.tag="$PG_IMAGE_TAG"
           done
