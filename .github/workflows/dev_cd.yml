@@ -1,7 +1,7 @@
 name: GiveGetGo CD Workflow for Development
 
 on:
-  push:
+  pull_request:
     branches:
       - development
 
@@ -42,52 +42,52 @@ jobs:
           echo "GIVEGETGO_REPO_NAME=${{ secrets.AWS_ECR_GIVEGETGO_REPO }}" >> $GITHUB_ENV
           echo "IMAGE_TAG=dev-$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
 
+      - name: Print environment variables for debugging
+        run: |
+          echo "ECR_REGISTRY=${ECR_REGISTRY}"
+          echo "NGINX_REPO_NAME=${NGINX_REPO_NAME}"
+          echo "IMAGE_TAG=${IMAGE_TAG}"
+        
+
       # Build and push nginx:
       - name: Build and push nginx
         run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           docker build -t $ECR_REGISTRY/$NGINX_REPO_NAME:$IMAGE_TAG ./nginx
           docker push $ECR_REGISTRY/$NGINX_REPO_NAME:$IMAGE_TAG
 
       # Build and push user-service
       - name: Build and push user-service
         run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:$user-IMAGE_TAG ./servers/user
           docker push $ECR_REGISTRY/GIVEGETGO_REPO_NAME:user-$IMAGE_TAG
 
       # Build and push verification-service
       - name: Build and push verification-service
         run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:verification-$IMAGE_TAG ./servers/verification
           docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:verification-$IMAGE_TAG
         
       # Build and push post-service
       - name: Build and push post-service
         run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:post-$IMAGE_TAG ./servers/post
           docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:post-$IMAGE_TAG
       
       # Build and push match-service
       - name: Build and push match-service
         run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:$IMAGE_TAG ./servers/match
           docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:match$IMAGE_TAG
 
       # Build and push bid-service
       - name: Build and push bid-service
         run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:bid-$IMAGE_TAG ./servers/bid
           docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:bid-$IMAGE_TAG
 
       # Build and push redis
       - name: Build and push redis
         run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:redis-$IMAGE_TAG ./servers/redis
           docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:redis-$IMAGE_TAG
 
