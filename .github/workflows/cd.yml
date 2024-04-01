@@ -159,7 +159,7 @@ jobs:
       # Build and push user-service
       - name: Build and push user-service
         run: |
-          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:$user-IMAGE_TAG ./servers/user
+          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:user-$IMAGE_TAG ./servers/user
           docker push $ECR_REGISTRY/GIVEGETGO_REPO_NAME:user-$IMAGE_TAG
 
       # Build and push verification-service
