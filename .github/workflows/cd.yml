@@ -173,7 +173,7 @@ jobs:
       # Decode the .env.match file
       - name: Decode the .env.match file
         run: |
-          echo "${{ secrets.MATCH_SERVICE_ENV }}" | base64 -d > ./servers/match.env.match
+          echo "${{ secrets.MATCH_SERVICE_ENV }}" | base64 -d > ./servers/match/.env.match
 
       # Build and push nginx:
       - name: Build and push nginx
