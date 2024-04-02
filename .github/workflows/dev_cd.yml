@@ -94,14 +94,6 @@ jobs:
           echo 'KUBE_CONFIG_DATA<<EOF' >> $GITHUB_ENV
           echo $(cat ./kubeconfig | base64) >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
-    
-      # Check eks config
-      - name: Check eks config
-        run: |
-          cat ${HOME}/.kube/config
-          echo $KUBECONFIG
-          kubectl config current-context
-          kubectl get nodes
         
       # Update Helm chart repo and tag for the each service
       - name: Update Helm charts
