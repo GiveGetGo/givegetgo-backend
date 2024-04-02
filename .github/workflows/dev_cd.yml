@@ -103,6 +103,10 @@ jobs:
       - name: Install Helm S3 plugin
         run: |
           helm plugin install https://github.com/hypnoglow/helm-s3.git
+
+      - name: Test Helm connectivity
+        run: |
+          helm list --kubeconfig=${HOME}/.kube/config --namespace=development --debug
     
       # Update Helm chart repo and tag for the each service
       - name: Update Helm charts
