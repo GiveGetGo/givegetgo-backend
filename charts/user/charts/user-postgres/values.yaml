@@ -91,7 +91,7 @@ postgres:
   user: ""
   password: ""
 
-persistance:
+persistence:
   enabled: true
   accessMode: ReadWriteOnce
   size: 10Gi

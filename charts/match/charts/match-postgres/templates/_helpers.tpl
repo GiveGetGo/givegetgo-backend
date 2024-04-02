@@ -60,3 +60,10 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Create Secret Name
+*/}}
+{{- define "match-postgres.secretName" -}}
+{{- printf "%s-postgres-secret" .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
