@@ -9,6 +9,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/development'
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./givegetgo-backend
     steps:
       # Checkout the repository
       - name: Checkout
