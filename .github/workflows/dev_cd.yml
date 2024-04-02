@@ -87,6 +87,11 @@ jobs:
           done
         shell: bash
 
+      # Update EKS kube config
+      - name: Update EKS config
+        run: |
+          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }}
+
       # Install Helm
       - name: Install Helm
         run: |
@@ -101,7 +106,7 @@ jobs:
       # Update Helm chart repo and tag for the each service
       - name: Update Helm charts
         run: |
-          for chart in nginx user verification post bid match; do
+          for chart in nginx user verification post bid match redis; do
             if [ "$chart" = "nginx" ]; then
               repo_name=$NGINX_REPO_NAME
               tag=$IMAGE_TAG
