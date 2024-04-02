@@ -116,6 +116,7 @@ jobs:
       # Check eks config
       - name: Check eks config
         run: |
+          cat ${HOME}/.kube/config
           echo $KUBECONFIG
           kubectl config current-context
           kubectl get nodes
