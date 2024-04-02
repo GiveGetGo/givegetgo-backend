@@ -89,7 +89,7 @@ jobs:
 
       # Configure AWS credentials for EKS
       - name: Configure AWS credentials for EKS
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_EKS_IAM_ROLE_ARN }}
           role-session-name: ci-run-${{ github.run_id }}
