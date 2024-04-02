@@ -86,13 +86,20 @@ jobs:
       #       docker push $ECR_REGISTRY/$repo_name:dev-$image_tag
       #     done
       #   shell: bash
+    
+      # AWS IAM Authenticator
+      - name: Install AWS IAM Authenticator
+        run: |
+          curl -o aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.15.10/2020-02-22/bin/linux/amd64/aws-iam-authenticator
+          chmod +x ./aws-iam-authenticator
+          sudo mv ./aws-iam-authenticator /usr/local/bin
 
-      # Update EKS kube config
+      # Update EKS kube config to use AWS IAM Authenticator
       - name: Update EKS config
         run: |
-          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }}
+          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }} --kubeconfig ${HOME}/.kube/config
           echo "KUBECONFIG=${HOME}/.kube/config" >> $GITHUB_ENV
-    
+            
       # Install Helm
       - name: Install Helm
         run: |
@@ -103,10 +110,6 @@ jobs:
       - name: Install Helm S3 plugin
         run: |
           helm plugin install https://github.com/hypnoglow/helm-s3.git
-
-      - name: Test Helm connectivity
-        run: |
-          helm list --kubeconfig=${HOME}/.kube/config --namespace=development --debug
     
       # Update Helm chart repo and tag for the each service
       - name: Update Helm charts
