@@ -86,6 +86,11 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
+postgres:
+  db: ""
+  user: ""
+  password: ""
+
 # Additional volumes on the output Deployment definition.
 volumes: []
 # - name: foo
