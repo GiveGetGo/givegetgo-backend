@@ -90,28 +90,10 @@ jobs:
       # Update EKS kube config to use AWS IAM Authenticator
       - name: Update EKS config
         run: |
-          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }} --kubeconfig ${HOME}/.kube/config
-          echo "KUBECONFIG=${HOME}/.kube/config" >> $GITHUB_ENV
-            
-      # Install Helm
-      - name: Install Helm
-        run: |
-          curl -fsSL https://get.helm.sh/helm-v3.14.2-linux-amd64.tar.gz | tar xz
-          sudo mv linux-amd64/helm /usr/local/bin/helm
-
-      # Install Helm S3 plugin
-      - name: Install Helm S3 plugin
-        run: |
-          helm plugin install https://github.com/hypnoglow/helm-s3.git
-    
-      # Add Helm S3 repo
-      - name: Add Helm S3 repo
-        run: |
-          helm repo add givegetgo-dev ${{ secrets.AWS_S3_HELM_REPO }}
-        
-      # Update Helm repositories
-      - name: Update Helm repositories
-        run: helm repo update
+          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }} --kubeconfig ./kubeconfig
+          echo 'KUBE_CONFIG_DATA<<EOF' >> $GITHUB_ENV
+          echo $(cat ./kubeconfig | base64) >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
     
       # Check eks config
       - name: Check eks config
@@ -123,21 +105,34 @@ jobs:
         
       # Update Helm chart repo and tag for the each service
       - name: Update Helm charts
+        uses: koslib/helm-eks-action@master
+        env:
+          KUBE_CONFIG_DATA: ${{ env.KUBE_CONFIG_DATA }}
+        with: 
+          command: |
+            for chart in nginx user verification post bid match redis; do
+              if [ "$chart" = "nginx" ]; then
+                repo_name=$NGINX_REPO_NAME
+                tag=$IMAGE_TAG
+              else
+                repo_name=$GIVEGETGO_REPO_NAME
+                tag=${chart}-$IMAGE_TAG
+              fi
+              helm upgrade --install $chart /charts/$chart \
+                --set image.repository=$ECR_REGISTRY/$repo_name \
+                --set image.tag=$tag \
+                --namespace=development \
+                --debug
+            done
+
+      # Add Helm S3 repo
+      - name: Add Helm S3 repo
         run: |
-          for chart in nginx user verification post bid match redis; do
-            if [ "$chart" = "nginx" ]; then
-              repo_name=$NGINX_REPO_NAME
-              tag=$IMAGE_TAG
-            else
-              repo_name=$GIVEGETGO_REPO_NAME
-              tag=${chart}-$IMAGE_TAG
-            fi
-            helm upgrade --install $chart /charts/$chart \
-              --set image.repository=$ECR_REGISTRY/$repo_name \
-              --set image.tag=$tag \
-              --namespace=development \
-              --debug
-          done
+          helm repo add givegetgo-dev ${{ secrets.AWS_S3_HELM_REPO }}
+        
+      # Update Helm repositories
+      - name: Update Helm repositories
+        run: helm repo update
       
       # Update Helm chart repo and tag for the each postgres service
       - name: Update postgres Helm charts
