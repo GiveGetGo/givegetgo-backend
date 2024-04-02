@@ -91,11 +91,13 @@ jobs:
       - name: Update EKS config
         run: |
           aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }}
+          echo "KUBECONFIG=${HOME}/.kube/config" >> $GITHUB_ENV
+
 
       # Install Helm
       - name: Install Helm
         run: |
-          curl https://get.helm.sh/helm-v3.5.4-linux-amd64.tar.gz | tar xz
+          curl -fsSL https://get.helm.sh/helm-v3.14.2-linux-amd64.tar.gz | tar xz
           sudo mv linux-amd64/helm /usr/local/bin/helm
 
       # Install Helm S3 plugin
@@ -116,7 +118,10 @@ jobs:
             fi
             helm upgrade --install $chart /charts/$chart \
               --set image.repository=$ECR_REGISTRY/$repo_name \
-              --set image.tag=$tag
+              --set image.tag=$tag \
+              --kubeconfig=${HOME}/.kube/config \
+              --namespace=development \
+              --debug
           done
       
       # Update Helm chart repo and tag for the each postgres service
@@ -125,5 +130,8 @@ jobs:
           for service in user verification post bid match; do
             helm upgrade --install ${service}-postgres /charts/${service}/charts/${service}-postgres \
               --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-              --set image.tag=${service}-postgres-$IMAGE_TAG
+              --set image.tag=${service}-postgres-$IMAGE_TAG \
+              --kubeconfig=${HOME}/.kube/config \
+              --namespace=development \
+              --debug
           done
