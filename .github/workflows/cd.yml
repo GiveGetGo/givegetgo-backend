@@ -67,115 +67,78 @@ jobs:
         run: |
           echo "${{ secrets.MATCH_SERVICE_ENV }}" | base64 -d > ./servers/match/.env.match
 
-      # Build and push nginx:
-      - name: Build and push nginx
+      # Build and push Docker images
+      - name: Build and push Docker images
         run: |
-          docker build -t $ECR_REGISTRY/$NGINX_REPO_NAME:$IMAGE_TAG ./nginx
-          docker push $ECR_REGISTRY/$NGINX_REPO_NAME:$IMAGE_TAG
-
-      # Build and push user-service
-      - name: Build and push user-service
-        run: |
-          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:user-$IMAGE_TAG ./servers/user
-          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:user-$IMAGE_TAG
-
-      # Build and push verification-service
-      - name: Build and push verification-service
-        run: |
-          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:verification-$IMAGE_TAG ./servers/verification
-          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:verification-$IMAGE_TAG
-        
-      # Build and push post-service
-      - name: Build and push post-service
-        run: |
-          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:post-$IMAGE_TAG ./servers/post
-          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:post-$IMAGE_TAG
-
-      # Build and push match-service
-      - name: Build and push match-service
-        run: |
-          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:match-$IMAGE_TAG ./servers/match
-          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:match-$IMAGE_TAG
-
-      # Build and push bid-service
-      - name: Build and push bid-service
-        run: |
-          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:bid-$IMAGE_TAG ./servers/bid
-          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:bid-$IMAGE_TAG
-
-      # Build and push redis
-      - name: Build and push redis
-        run: |
-          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:redis-$IMAGE_TAG ./servers/redis
-          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:redis-$IMAGE_TAG
-
-      # Update Helm chart repo and tag
-      - name: Update nginx Helm chart
-        run: |
-          helm upgrade --install nginx /charts/nginx \
-            --set image.repository=$ECR_REGISTRY/$NGINX_REPO_NAME \
-            --set image.tag=$IMAGE_TAG
-
-      - name: Update user Helm chart
-        run: |
-          helm upgrade --install user /charts/user \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=user-$IMAGE_TAG
-
-      - name: Update verification Helm chart
-        run: |
-          helm upgrade --install verification /charts/verification \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=verification-$IMAGE_TAG
-
-      - name: Update post Helm chart
-        run: |
-          helm upgrade --install post /charts/post \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=post-$IMAGE_TAG
-
-      - name: Update bid Helm chart
-        run: |
-          helm upgrade --install bid /charts/bid \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=bid-$IMAGE_TAG
-        
-      - name: Update match Helm chart
-        run: |
-          helm upgrade --install match /charts/match \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=match-$IMAGE_TAG
-
-      # Update Helm chart repo and tag for the each postgres service
-      - name: Update user-postgres Helm chart
-        run: |
-          helm upgrade --install user-postgres /charts/user/charts/user-postgres \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=user-postgres-$IMAGE_TAG
-          
-      - name: Update verification-postgres Helm chart
-        run: |
-          helm upgrade --install verification-postgres /charts/verification/charts/verification-postgres \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=verification-postgres-$IMAGE_TAG
-        
-      - name: Update post-postgres Helm chart
-        run: |
-          helm upgrade --install post-postgres /charts/post/charts/post-postgres \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=post-postgres-$IMAGE_TAG
+          declare -a services=("nginx" "user" "verification" "post" "bid" "match")
+          for service in "${services[@]}"; do
+            if [ "$service" == "nginx" ]; then
+              image_tag=$IMAGE_TAG
+              path="./nginx"
+              repo_name=$NGINX_REPO_NAME
+            else
+              image_tag="${service}-$IMAGE_TAG"
+              path="./servers/$service"
+              repo_name=$GIVEGETGO_REPO_NAME
+            fi
       
-      - name: Update bid-postgres Helm chart
-        run: |
-          helm upgrade --install bid-postgres /charts/bid/charts/bid-postgres \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=bid-postgres-$IMAGE_TAG
+            docker build -t $ECR_REGISTRY/$repo_name:$image_tag $path
+            docker push $ECR_REGISTRY/$repo_name:$image_tag
+          done
+        shell: bash
 
-      - name: Update match-postgres Helm chart
+      # Install Helm
+      - name: Install Helm
         run: |
-          helm upgrade --install match-postgres /charts/match/charts/match-postgres \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=match-postgres-$IMAGE_TAG
+          curl https://get.helm.sh/helm-v3.5.4-linux-amd64.tar.gz | tar xz
+          sudo mv linux-amd64/helm /usr/local/bin/helm
+    
+      # Install Helm S3 plugin
+      - name: Install Helm S3 plugin
+        run: |
+          helm plugin install https://github.com/hypnoglow/helm-s3.git
+
+      # Update Helm chart repo and tag for the each service
+      - name: Update Helm charts
+        run: |
+          for chart in nginx user verification post bid match redis; do
+            if [ "$chart" = "nginx" ]; then
+              repo_name=$NGINX_REPO_NAME
+              tag=$IMAGE_TAG
+            else
+              repo_name=$GIVEGETGO_REPO_NAME
+              tag=${chart}-$IMAGE_TAG
+            fi
+            helm upgrade --install $chart /charts/$chart \
+              --set image.repository=$ECR_REGISTRY/$repo_name \
+              --set image.tag=$tag
+          done
+      
+      # Update Helm chart repo and tag for the each postgres service
+      - name: Update postgres Helm charts
+        run: |
+          for service in user verification post bid match; do
+            helm upgrade --install ${service}-postgres /charts/${service}/charts/${service}-postgres \
+              --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
+              --set image.tag=${service}-postgres-$IMAGE_TAG
+          done
+      
+      - name: Package and upload Helm charts to S3
+        run: |
+          for dir in ./charts/*; do
+            if [ -d "$dir" ]; then
+              chart_name=$(basename $dir)
+              # Check if there is a Chart.yaml file in the directory
+              if [ -f "$dir/Chart.yaml" ]; then
+                echo "Packaging $chart_name chart..."
+                helm package $dir -d ./packaged-charts
+                
+                echo "Uploading $chart_name chart to S3..."
+                helm s3 push ./packaged-charts/$chart_name-*.tgz s3://bucket/charts/
+              fi
+            fi
+          done
+        shell: bash
 
       # Update EKS kube config
       - name: Update EKS config
