@@ -93,7 +93,13 @@ jobs:
           aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }}
           echo "KUBECONFIG=${HOME}/.kube/config" >> $GITHUB_ENV
 
-
+      # Dry run kubectl apply
+      - name: Dry run kubectl apply
+        run: |
+          for service in user verification post bid match; do
+            kubectl apply -f ./chart/$service/deployment.yaml --dry-run=client
+          done
+    
       # Install Helm
       - name: Install Helm
         run: |
