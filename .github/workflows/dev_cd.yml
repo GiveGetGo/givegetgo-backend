@@ -87,10 +87,18 @@ jobs:
       #     done
       #   shell: bash
 
+      # Configure AWS credentials for EKS
+      - name: Configure AWS credentials for EKS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_EKS_IAM_ROLE_ARN }}
+          role-session-name: ci-run-${{ github.run_id }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       # Update EKS kube config to use AWS IAM Authenticator
       - name: Update EKS config
         run: |
-          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }} --kubeconfig ${HOME}/.kube/config
+          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }} --role-arn ${{ secrets.AWS_EKS_IAM_ROLE_ARN }} --kubeconfig ${HOME}/.kube/config
           echo "KUBECONFIG=${HOME}/.kube/config" >> $GITHUB_ENV
             
       # Install Helm
@@ -119,7 +127,7 @@ jobs:
           cat ${HOME}/.kube/config
           echo $KUBECONFIG
           kubectl config current-context
-          kubectl get pods --namespace=default
+          kubectl get pods --namespace=d
         
       # Update Helm chart repo and tag for the each service
       - name: Update Helm charts
