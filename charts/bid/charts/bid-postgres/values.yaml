@@ -1,4 +1,4 @@
-# Default values for redis.
+# Default values for bid-postgres.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -15,14 +15,14 @@ fullnameOverride: ""
 
 serviceAccount:
   # Specifies whether a service account should be created
-  create: false
+  create: true
   # Automatically mount a ServiceAccount's API credentials?
   automount: true
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: "default"
+  name: ""
 
 podAnnotations: {}
 podLabels: {}
@@ -40,7 +40,7 @@ securityContext: {}
 
 service:
   type: ClusterIP
-  port: 6379
+  port: 80
 
 ingress:
   enabled: false
@@ -58,17 +58,26 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
-resources: 
+resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
   # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  requests:
-    cpu: 0.5
-    memory: 1Gi
-  limits:
-    cpu: 1
-    memory: 2Gi
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
 
 autoscaling:
   enabled: false
@@ -77,11 +86,16 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
+postgres:
+  db: ""
+  user: ""
+  password: ""
+
 persistence:
   enabled: true
   accessMode: ReadWriteOnce
-  size: 5Gi
-  storageClass: "standard"
+  size: 10Gi
+  storageClass: ""
 
 # Additional volumes on the output Deployment definition.
 volumes: []

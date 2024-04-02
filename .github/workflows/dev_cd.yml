@@ -42,30 +42,30 @@ jobs:
           echo "GIVEGETGO_REPO_NAME=${{ secrets.AWS_ECR_GIVEGETGO_REPO }}" >> $GITHUB_ENV
           echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
 
-      # Decode the .env.user file
-      - name: Decode the .env.user file
-        run: |
-          echo "${{ secrets.USER_SERVICE_ENV }}" | base64 -d > ./servers/user/.env.user
+      # # Decode the .env.user file
+      # - name: Decode the .env.user file
+      #   run: |
+      #     echo "${{ secrets.USER_SERVICE_ENV }}" | base64 -d > ./servers/user/.env.user
 
-      # Decode the .env.verification file
-      - name: Decode the .env.verification file
-        run: |
-          echo "${{ secrets.VERIFICATION_SERVICE_ENV }}" | base64 -d > ./servers/verification/.env.verification
+      # # Decode the .env.verification file
+      # - name: Decode the .env.verification file
+      #   run: |
+      #     echo "${{ secrets.VERIFICATION_SERVICE_ENV }}" | base64 -d > ./servers/verification/.env.verification
 
-      # Decode the .env.post file
-      - name: Decode the .env.post file
-        run: |
-          echo "${{ secrets.POST_SERVICE_ENV }}" | base64 -d > ./servers/post/.env.post
+      # # Decode the .env.post file
+      # - name: Decode the .env.post file
+      #   run: |
+      #     echo "${{ secrets.POST_SERVICE_ENV }}" | base64 -d > ./servers/post/.env.post
       
-      # Decode the .env.bid file
-      - name: Decode the .env.bid file
-        run: |
-          echo "${{ secrets.BID_SERVICE_ENV }}" | base64 -d > ./servers/bid/.env.bid
+      # # Decode the .env.bid file
+      # - name: Decode the .env.bid file
+      #   run: |
+      #     echo "${{ secrets.BID_SERVICE_ENV }}" | base64 -d > ./servers/bid/.env.bid
       
-      # Decode the .env.match file
-      - name: Decode the .env.match file
-        run: |
-          echo "${{ secrets.MATCH_SERVICE_ENV }}" | base64 -d > ./servers/match/.env.match
+      # # Decode the .env.match file
+      # - name: Decode the .env.match file
+      #   run: |
+      #     echo "${{ secrets.MATCH_SERVICE_ENV }}" | base64 -d > ./servers/match/.env.match
 
       # # Build and push Docker images
       # - name: Build and push Docker images
@@ -87,12 +87,12 @@ jobs:
       #     done
       #   shell: bash
 
-      # Update EKS kube config
+      # Update EKS kube config to use AWS IAM Authenticator
       - name: Update EKS config
         run: |
           aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }}
           echo "KUBECONFIG=${HOME}/.kube/config" >> $GITHUB_ENV
-    
+            
       # Install Helm
       - name: Install Helm
         run: |
@@ -104,10 +104,19 @@ jobs:
         run: |
           helm plugin install https://github.com/hypnoglow/helm-s3.git
     
+      # Add Helm S3 repo
+      - name: Add Helm S3 repo
+        run: |
+          helm repo add givegetgo-dev ${{ secrets.AWS_S3_HELM_REPO }}
+        
+      # Update Helm repositories
+      - name: Update Helm repositories
+        run: helm repo update
+        
       # Update Helm chart repo and tag for the each service
       - name: Update Helm charts
         run: |
-          for chart in nginx user verification post bid match redis; do
+          for chart in nginx user verification post bid match; do
             if [ "$chart" = "nginx" ]; then
               repo_name=$NGINX_REPO_NAME
               tag=$IMAGE_TAG
@@ -115,10 +124,9 @@ jobs:
               repo_name=$GIVEGETGO_REPO_NAME
               tag=${chart}-$IMAGE_TAG
             fi
-            helm upgrade --install $chart /charts/$chart \
+            helm upgrade --install $chart ./charts/$chart \
               --set image.repository=$ECR_REGISTRY/$repo_name \
               --set image.tag=$tag \
-              --kubeconfig=${HOME}/.kube/config \
               --namespace=development \
               --debug
           done
@@ -127,10 +135,10 @@ jobs:
       - name: Update postgres Helm charts
         run: |
           for service in user verification post bid match; do
-            helm upgrade --install ${service}-postgres /charts/${service}/charts/${service}-postgres \
+            helm upgrade --install ${service}-postgres ./charts/${service}/charts/${service}-postgres \
               --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
               --set image.tag=${service}-postgres-$IMAGE_TAG \
-              --kubeconfig=${HOME}/.kube/config \
               --namespace=development \
               --debug
           done
+          
