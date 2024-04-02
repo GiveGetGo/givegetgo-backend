@@ -9,10 +9,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/development'
-    defaults:
-      run:
-        shell: bash
-        working-directory: ./givegetgo-backend
     steps:
       # Checkout the repository
       - name: Checkout
@@ -37,6 +33,12 @@ jobs:
       #   run: |
       #     echo "::set-output name=user_service_changed::$(git diff --name-only ${{ github.sha }} ${{ github.event.before }} | grep -q 'servers/user' && echo 'true' || echo 'false')"
       #     echo "::set-output name=verification_service_changed::$(git diff --name-only ${{ github.sha }} ${{ github.event.before }} | grep -q 'servers/verification' && echo 'true' || echo 'false')"
+
+      # pwd and ls
+      - name: pwd and ls
+        run: |
+          pwd
+          ls -laR /home/runner/work/
 
       # Set up Docker environment variables
       - name: Set up Docker environment variables
