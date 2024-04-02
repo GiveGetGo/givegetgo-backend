@@ -98,7 +98,7 @@ jobs:
       # Update EKS kube config to use AWS IAM Authenticator
       - name: Update EKS config
         run: |
-          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }} --role-arn ${{ secrets.AWS_EKS_IAM_ROLE_ARN }} --kubeconfig ${HOME}/.kube/config
+          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }} --role-arn ${{ secrets.AWS_EKS_IAM_ROLE_ARN }}
           echo "KUBECONFIG=${HOME}/.kube/config" >> $GITHUB_ENV
             
       # Install Helm
@@ -124,8 +124,7 @@ jobs:
       # Check eks config
       - name: Check eks config
         run: |
-          cat ${HOME}/.kube/config
-          echo $KUBECONFIG
+          cat ~/.kube/config
           kubectl config current-context
           kubectl get nodes -v=10
           kubectl get pods --namespace=default -v=10
