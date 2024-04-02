@@ -112,6 +112,11 @@ jobs:
       # Update Helm repositories
       - name: Update Helm repositories
         run: helm repo update
+    
+      # Check eks config
+      - name: Check eks config
+        run: |
+          kubectl config current-context
         
       # Update Helm chart repo and tag for the each service
       - name: Update Helm charts
