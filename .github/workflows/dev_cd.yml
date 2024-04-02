@@ -127,7 +127,6 @@ jobs:
             helm upgrade --install $chart /charts/$chart \
               --set image.repository=$ECR_REGISTRY/$repo_name \
               --set image.tag=$tag \
-              --kubeconfig=${HOME}/.kube/config \
               --namespace=development \
               --debug
           done
@@ -139,7 +138,6 @@ jobs:
             helm upgrade --install ${service}-postgres /charts/${service}/charts/${service}-postgres \
               --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
               --set image.tag=${service}-postgres-$IMAGE_TAG \
-              --kubeconfig=${HOME}/.kube/config \
               --namespace=development \
               --debug
           done
