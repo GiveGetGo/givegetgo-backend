@@ -124,7 +124,7 @@ jobs:
               repo_name=$GIVEGETGO_REPO_NAME
               tag=${chart}-$IMAGE_TAG
             fi
-            helm upgrade --install $chart /charts/$chart \
+            helm upgrade --install $chart ./charts/$chart \
               --set image.repository=$ECR_REGISTRY/$repo_name \
               --set image.tag=$tag \
               --namespace=development \
@@ -135,7 +135,7 @@ jobs:
       - name: Update postgres Helm charts
         run: |
           for service in user verification post bid match; do
-            helm upgrade --install ${service}-postgres /charts/${service}/charts/${service}-postgres \
+            helm upgrade --install ${service}-postgres ./charts/${service}/charts/${service}-postgres \
               --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
               --set image.tag=${service}-postgres-$IMAGE_TAG \
               --namespace=development \
