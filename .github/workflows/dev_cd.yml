@@ -127,7 +127,7 @@ jobs:
           cat ${HOME}/.kube/config
           echo $KUBECONFIG
           kubectl config current-context
-          kubectl get nodes
+          kubectl get pods --namespace=default
         
       # Update Helm chart repo and tag for the each service
       - name: Update Helm charts
