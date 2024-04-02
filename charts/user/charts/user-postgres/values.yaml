@@ -91,6 +91,12 @@ postgres:
   user: ""
   password: ""
 
+persistance:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  storageClass: ""
+
 # Additional volumes on the output Deployment definition.
 volumes: []
 # - name: foo
