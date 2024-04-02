@@ -42,30 +42,30 @@ jobs:
           echo "GIVEGETGO_REPO_NAME=${{ secrets.AWS_ECR_GIVEGETGO_REPO }}" >> $GITHUB_ENV
           echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
 
-      # Decode the .env.user file
-      - name: Decode the .env.user file
-        run: |
-          echo "${{ secrets.USER_SERVICE_ENV }}" | base64 -d > ./servers/user/.env.user
+      # # Decode the .env.user file
+      # - name: Decode the .env.user file
+      #   run: |
+      #     echo "${{ secrets.USER_SERVICE_ENV }}" | base64 -d > ./servers/user/.env.user
 
-      # Decode the .env.verification file
-      - name: Decode the .env.verification file
-        run: |
-          echo "${{ secrets.VERIFICATION_SERVICE_ENV }}" | base64 -d > ./servers/verification/.env.verification
+      # # Decode the .env.verification file
+      # - name: Decode the .env.verification file
+      #   run: |
+      #     echo "${{ secrets.VERIFICATION_SERVICE_ENV }}" | base64 -d > ./servers/verification/.env.verification
 
-      # Decode the .env.post file
-      - name: Decode the .env.post file
-        run: |
-          echo "${{ secrets.POST_SERVICE_ENV }}" | base64 -d > ./servers/post/.env.post
+      # # Decode the .env.post file
+      # - name: Decode the .env.post file
+      #   run: |
+      #     echo "${{ secrets.POST_SERVICE_ENV }}" | base64 -d > ./servers/post/.env.post
       
-      # Decode the .env.bid file
-      - name: Decode the .env.bid file
-        run: |
-          echo "${{ secrets.BID_SERVICE_ENV }}" | base64 -d > ./servers/bid/.env.bid
+      # # Decode the .env.bid file
+      # - name: Decode the .env.bid file
+      #   run: |
+      #     echo "${{ secrets.BID_SERVICE_ENV }}" | base64 -d > ./servers/bid/.env.bid
       
-      # Decode the .env.match file
-      - name: Decode the .env.match file
-        run: |
-          echo "${{ secrets.MATCH_SERVICE_ENV }}" | base64 -d > ./servers/match/.env.match
+      # # Decode the .env.match file
+      # - name: Decode the .env.match file
+      #   run: |
+      #     echo "${{ secrets.MATCH_SERVICE_ENV }}" | base64 -d > ./servers/match/.env.match
 
       # # Build and push Docker images
       # - name: Build and push Docker images
@@ -116,6 +116,7 @@ jobs:
       # Check eks config
       - name: Check eks config
         run: |
+          echo $KUBECONFIG
           kubectl config current-context
           kubectl get nodes
         
