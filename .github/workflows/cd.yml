@@ -87,6 +87,11 @@ jobs:
           done
         shell: bash
 
+      # Update EKS kube config
+      - name: Update EKS config
+        run: |
+          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }}
+
       # Install Helm
       - name: Install Helm
         run: |
@@ -139,11 +144,6 @@ jobs:
             fi
           done
         shell: bash
-
-      # Update EKS kube config
-      - name: Update EKS config
-        run: |
-          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }}
 
       # Decode env files for user-service and user-postgres
       - name: Decode Environment File and Create Secret for user-service
