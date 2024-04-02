@@ -86,13 +86,6 @@ jobs:
       #       docker push $ECR_REGISTRY/$repo_name:dev-$image_tag
       #     done
       #   shell: bash
-    
-      # AWS IAM Authenticator
-      - name: Install AWS IAM Authenticator
-        run: |
-          curl -o aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.15.10/2020-02-22/bin/linux/amd64/aws-iam-authenticator
-          chmod +x ./aws-iam-authenticator
-          sudo mv ./aws-iam-authenticator /usr/local/bin
 
       # Update EKS kube config to use AWS IAM Authenticator
       - name: Update EKS config
@@ -106,6 +99,11 @@ jobs:
           curl -fsSL https://get.helm.sh/helm-v3.14.2-linux-amd64.tar.gz | tar xz
           sudo mv linux-amd64/helm /usr/local/bin/helm
 
+      # Check Helm version
+      - name: Check Helm version
+        run: |
+          helm version
+          
       # Install Helm S3 plugin
       - name: Install Helm S3 plugin
         run: |
