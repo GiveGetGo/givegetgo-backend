@@ -67,25 +67,25 @@ jobs:
         run: |
           echo "${{ secrets.MATCH_SERVICE_ENV }}" | base64 -d > ./servers/match/.env.match
 
-      # Build and push Docker images
-      - name: Build and push Docker images
-        run: |
-          declare -a services=("nginx" "user" "verification" "post" "bid" "match")
-          for service in "${services[@]}"; do
-            if [ "$service" == "nginx" ]; then
-              image_tag=$IMAGE_TAG
-              path="./nginx"
-              repo_name=$NGINX_REPO_NAME
-            else
-              image_tag="${service}-$IMAGE_TAG"
-              path="./servers/$service"
-              repo_name=$GIVEGETGO_REPO_NAME
-            fi
+      # # Build and push Docker images
+      # - name: Build and push Docker images
+      #   run: |
+      #     declare -a services=("nginx" "user" "verification" "post" "bid" "match")
+      #     for service in "${services[@]}"; do
+      #       if [ "$service" == "nginx" ]; then
+      #         image_tag=$IMAGE_TAG
+      #         path="./nginx"
+      #         repo_name=$NGINX_REPO_NAME
+      #       else
+      #         image_tag="${service}-$IMAGE_TAG"
+      #         path="./servers/$service"
+      #         repo_name=$GIVEGETGO_REPO_NAME
+      #       fi
       
-            docker build -t $ECR_REGISTRY/$repo_name:dev-$image_tag $path
-            docker push $ECR_REGISTRY/$repo_name:dev-$image_tag
-          done
-        shell: bash
+      #       docker build -t $ECR_REGISTRY/$repo_name:dev-$image_tag $path
+      #       docker push $ECR_REGISTRY/$repo_name:dev-$image_tag
+      #     done
+      #   shell: bash
 
       # Update EKS kube config
       - name: Update EKS config
@@ -97,7 +97,7 @@ jobs:
       - name: Dry run kubectl apply
         run: |
           for service in user verification post bid match; do
-            kubectl apply -f ./chart/$service/deployment.yaml --dry-run=client
+            kubectl apply -f ./chart/$service/templates/deployment.yaml --dry-run=client
           done
     
       # Install Helm
