@@ -125,6 +125,7 @@ jobs:
       - name: Check eks config
         run: |
           cat ~/.kube/config
+          aws sts get-caller-identity
           kubectl config current-context
           kubectl get nodes -v=10
           kubectl get pods --namespace=default -v=10
