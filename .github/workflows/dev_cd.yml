@@ -99,16 +99,20 @@ jobs:
           curl -fsSL https://get.helm.sh/helm-v3.14.2-linux-amd64.tar.gz | tar xz
           sudo mv linux-amd64/helm /usr/local/bin/helm
 
-      # Check Helm version
-      - name: Check Helm version
-        run: |
-          helm version
-          
       # Install Helm S3 plugin
       - name: Install Helm S3 plugin
         run: |
           helm plugin install https://github.com/hypnoglow/helm-s3.git
     
+      # Add Helm S3 repo
+      - name: Add Helm S3 repo
+        run: |
+          helm repo add givegetgo-dev ${{ secrets.AWS_S3_HELM_REPO }}
+        
+      # Update Helm repositories
+      - name: Update Helm repositories
+        run: helm repo update
+        
       # Update Helm chart repo and tag for the each service
       - name: Update Helm charts
         run: |
