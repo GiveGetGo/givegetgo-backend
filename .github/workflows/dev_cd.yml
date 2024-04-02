@@ -117,6 +117,7 @@ jobs:
       - name: Check eks config
         run: |
           kubectl config current-context
+          kubectl get nodes
         
       # Update Helm chart repo and tag for the each service
       - name: Update Helm charts
