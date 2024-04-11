@@ -16,3 +16,6 @@ redis/.env.redis
 
 # redis
 redis.conf
+
+# service env files
+*-encoded.txt

@@ -32,10 +32,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "match-postgres.fullname" . }}-secret
                   key: MATCH_POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/match/pgdata
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
-              name: postgres-storage
+              name: match-postgres-storage
       volumes:
-        - name: postgres-storage
+        - name: match-postgres-storage
           persistentVolumeClaim:
             claimName: {{ include "match-postgres.fullname" . }}-pvc

@@ -32,10 +32,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "bid-postgres.fullname" . }}-secret
                   key: BID_POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/bid/pgdata
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
-              name: postgres-storage
+              name: bid-postgres-storage
       volumes:
-        - name: postgres-storage
+        - name: bid-postgres-storage
           persistentVolumeClaim:
             claimName: {{ include "bid-postgres.fullname" . }}-pvc

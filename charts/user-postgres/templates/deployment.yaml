@@ -32,10 +32,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "user-postgres.fullname" . }}-secret
                   key: USER_POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/user/pgdata
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
-              name: postgres-storage
+              name: user-postgres-storage
       volumes:
-        - name: postgres-storage
+        - name: user-postgres-storage
           persistentVolumeClaim:
             claimName: {{ include "user-postgres.fullname" . }}-pvc
