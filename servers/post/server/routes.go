@@ -18,10 +18,10 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	// Public routes - without auth middleware
 
 	// Public routes - with auth middleware
-	postAuthGroup := r.Group("/v1/request")
+	postAuthGroup := r.Group("/v1/post")
 	// TODO: Add auth middleware
 	{
-		postAuthGroup.POST("/request", controller.AddPostHandler(postUtils))
+		postAuthGroup.POST("/add", controller.AddPostHandler(postUtils))
 	}
 
 	return r

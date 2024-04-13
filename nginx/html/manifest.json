@@ -1,0 +1,9 @@
+{
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "lang": "en",
+  "name": "client",
+  "short_name": "client",
+  "start_url": "/?utm_source=web_app_manifest",
+  "orientation": "portrait"
+}

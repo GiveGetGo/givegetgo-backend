@@ -17,8 +17,16 @@ import (
 func RegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Parse the request body
+		log.Println("RegisterHandler called")
+
 		var req types.RegisterRequest
+		//if err := c.BindJSON(&req); err != nil {
+		//	types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+		//	return
+		//}
+
 		if err := c.BindJSON(&req); err != nil {
+			log.Printf("Error binding JSON: %v", err)
 			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}

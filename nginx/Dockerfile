@@ -6,6 +6,7 @@ RUN rm /etc/nginx/conf.d/default.conf
 
 # Copy the configuration file from the current directory to the container
 COPY nginx.conf /etc/nginx/nginx.conf
+COPY html /var/www
 
 # Expose port 80
 EXPOSE 80

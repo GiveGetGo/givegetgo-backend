@@ -15,6 +15,7 @@ type Post struct {
 	UserID      uint `gorm:"index"`
 	Title       string
 	Description string
+	Category    string
 	Status      PostStatus
 	DatePosted  time.Time
 	DateUpdated time.Time

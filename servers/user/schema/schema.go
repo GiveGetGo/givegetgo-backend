@@ -14,6 +14,8 @@ type User struct {
 	MFASecret       string
 	DateJoined      time.Time
 	LastActiveDate  time.Time
+	Class           string
+	Major           string
 }
 
 type Post struct {
