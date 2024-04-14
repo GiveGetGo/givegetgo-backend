@@ -68,14 +68,14 @@ func RegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		}
 
 		// Create the user
-		user, err = userUtils.CreateUser(req.UserName, req.Email, hashedPassword)
+		user, err = userUtils.CreateUser(req.Email, hashedPassword, req.Class, req.Major)
 		if err != nil {
 			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		// request the verification server to send a verification email
-		err = userUtils.RequestRegisterVerificationEmail(user.UserID, req.UserName, req.Email)
+		err = userUtils.RequestRegisterVerificationEmail(user.UserID, req.Email)
 		if err != nil {
 			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return

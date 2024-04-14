@@ -22,11 +22,11 @@ import (
 type IUserUtils interface {
 	GetUserByID(userID uint) (schema.User, error)
 	GetUserByEmail(email string) (schema.User, error)
-	CreateUser(username, email, hashedPassword string) (schema.User, error)
+	CreateUser(email, hashedPassword, class, major string) (schema.User, error)
 	ValidatePassword(password string) error
 	HashPassword(password string) (string, error)
 	AuthenticateUser(user schema.User, password string) bool
-	RequestRegisterVerificationEmail(userID uint, username string, email string) error
+	RequestRegisterVerificationEmail(userID uint, email string) error
 	RequestForgetpassVerificationEmail(userID uint, username string, email string) error
 	MarkEmailVerified(email string) error
 	MarkMFAVerified(userID uint) error
@@ -74,12 +74,18 @@ func (u *UserUtils) GetUserByEmail(email string) (schema.User, error) {
 }
 
 // CreateUser creates a user
-func (u *UserUtils) CreateUser(username, email, hashedPassword string) (schema.User, error) {
+func (u *UserUtils) CreateUser(email, hashedPassword, class, major string) (schema.User, error) {
+	// Extract username from email (basic example)
+    username := strings.Split(email, "@")[0]
+	
 	// create the user
 	user := schema.User{
 		UserName:       username,
-		Email:          email,
-		HashedPassword: hashedPassword,
+        Email:          email,
+        HashedPassword: hashedPassword,
+        Class:          class, 
+        Major:          major,  
+
 	}
 	err := u.DB.Create(&user).Error
 	if err != nil {
@@ -154,7 +160,10 @@ func (u *UserUtils) AuthenticateUser(user schema.User, password string) bool {
 }
 
 // RequestVerificationEmail - request verification email through calling verification_server /verification/request-email
-func (u *UserUtils) RequestRegisterVerificationEmail(userID uint, username string, email string) error {
+func (u *UserUtils) RequestRegisterVerificationEmail(userID uint, email string) error {
+	// Extract username from email (basic example)
+    username := strings.Split(email, "@")[0]
+	
 	verificationReqBody, err := json.Marshal(struct {
 		Event    string `json:"event"`
 		UserID   uint   `json:"userID"`
