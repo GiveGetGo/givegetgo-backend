@@ -32,6 +32,7 @@ jobs:
         run: |
           current_version=$(kubectl get configmap givegetgo-secrets-version -o=jsonpath='{.data.version}')
           echo "Current EKS secrets version: $current_version"
+          echo "GitHub secrets version: ${{ secrets.SECRETS_VERSION }}"
           if [ "$current_version" != "${{ secrets.SECRETS_VERSION }}" ]; then
             echo "secrets-changed=true" >> $GITHUB_OUTPUT
           else
@@ -222,22 +223,22 @@ jobs:
             
               echo "$postgres_secret" | base64 -d > "./$service-postgres.env"
               
-              if kubectl get secret dev-givegetgo-${service}-postgres-secret -n $namespace &> /dev/null; then
+              if kubectl get secret givegetgo-${service}-postgres-secret -n $namespace &> /dev/null; then
                   # Secret exists, check if it needs to be updated
-                  existing_secret=$(kubectl get secret dev-givegetgo-${service}-postgres-secret -n $namespace -o jsonpath='{.data}')
+                  existing_secret=$(kubectl get secret givegetgo-${service}-postgres-secret -n $namespace -o jsonpath='{.data}')
                   
                   new_secret=$(cat ./$service-postgres.env | base64)
                   
                   if [ "$existing_secret" != "$new_secret" ]; then
-                      echo "Updating existing secret dev-givegetgo-${service}-postgres-secret because the content has changed."
-                      kubectl create secret generic dev-givegetgo-${service}-postgres-secret --from-env-file=./$service-postgres.env --namespace $namespace --dry-run=client -o yaml | kubectl apply -f -
+                      echo "Updating existing secret givegetgo-${service}-postgres-secret because the content has changed."
+                      kubectl create secret generic givegetgo-${service}-postgres-secret --from-env-file=./$service-postgres.env --namespace $namespace --dry-run=client -o yaml | kubectl apply -f -
                   else
                       echo "Secret ${service}-postgres-secret is up to date. No changes needed."
                   fi
               else
                   # Secret does not exist, create it
-                  echo "Creating secret dev-givegetgo-${service}-postgres-secret."
-                  kubectl create secret generic dev-givegetgo-${service}-postgres-secret --from-env-file=./$service-postgres.env --namespace $namespace
+                  echo "Creating secret givegetgo-${service}-postgres-secret."
+                  kubectl create secret generic givegetgo-${service}-postgres-secret --from-env-file=./$service-postgres.env --namespace $namespace
               fi
           done
         shell: bash
@@ -332,10 +333,10 @@ jobs:
           done
       
           # Update PostgreSQL applications
-          # for service in user-postgres post-postgres verification-postgres bid-postgres match-postgres; do
-          #   APP_NAME="dev-givegetgo-$service"
-          #   argocd app set $APP_NAME \
-          #     --helm-set image.repository="$POSTGRES_IMAGE_REPO" \
-          #     --helm-set image.tag="$POSTGRES_IMAGE_TAG"
-          # done
+          for service in user-postgres post-postgres verification-postgres bid-postgres match-postgres; do
+            APP_NAME="givegetgo-$service"
+            argocd app set $APP_NAME \
+              --helm-set image.repository="$POSTGRES_IMAGE_REPO" \
+              --helm-set image.tag="$POSTGRES_IMAGE_TAG"
+          done
         shell: bash

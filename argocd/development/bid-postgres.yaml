@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: dev-givegetgo-bid-postgres
+  name: givegetgo-bid-postgres
   namespace: argocd
 spec:
   project: givegetgo-development

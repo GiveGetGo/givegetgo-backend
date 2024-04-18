@@ -72,12 +72,17 @@ resources: {}
 
 livenessProbe:
   httpGet:
-    path: /
+    path: /v1/match/health
     port: http
-readinessProbe:
+  failureThreshold: 1
+  periodSeconds: 10
+
+startupProbe:
   httpGet:
-    path: /
+    path: /v1/match/health
     port: http
+  failureThreshold: 30
+  periodSeconds: 10
 
 autoscaling:
   enabled: true

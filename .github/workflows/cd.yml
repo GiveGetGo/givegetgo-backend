@@ -32,6 +32,7 @@ jobs:
         run: |
           current_version=$(kubectl get configmap givegetgo-secrets-version -o=jsonpath='{.data.version}')
           echo "Current EKS secrets version: $current_version"
+          echo "Secrets version from GitHub: ${{ secrets.SECRETS_VERSION }}"
           if [ "$current_version" != "${{ secrets.SECRETS_VERSION }}" ]; then
             echo "secrets-changed=true" >> $GITHUB_OUTPUT
           else

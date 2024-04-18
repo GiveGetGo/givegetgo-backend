@@ -4,7 +4,7 @@ go 1.22.0
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/GiveGetGo/shared v0.1.4
+	github.com/GiveGetGo/shared v0.2.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/golang/mock v1.6.0
 	github.com/pquerna/otp v1.4.0

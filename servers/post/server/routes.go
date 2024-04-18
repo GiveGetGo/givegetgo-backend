@@ -4,6 +4,7 @@ import (
 	"post/controller"
 	"post/utils"
 
+	sharedController "github.com/GiveGetGo/shared/controller"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -16,6 +17,10 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	postUtils := utils.NewPostUtils(DB, redisClient)
 
 	// Public routes - without auth middleware
+	unAuthGroup := r.Group("/v1")
+	{
+		unAuthGroup.GET("/post/health", sharedController.HealthCheckHandler())
+	}
 
 	// Public routes - with auth middleware
 	postAuthGroup := r.Group("/v1/request")
