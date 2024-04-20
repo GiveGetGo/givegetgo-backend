@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: dev-givegetgo-user-backend
+  name: givegetgo-user-backend
   namespace: argocd
 spec:
   project: givegetgo-development

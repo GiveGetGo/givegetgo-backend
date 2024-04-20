@@ -40,26 +40,18 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
-          livenessProbe:
-            {{- toYaml .Values.livenessProbe | nindent 12 }}
-          readinessProbe:
-            {{- toYaml .Values.readinessProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- with .Values.volumeMounts }}
           volumeMounts:
-          - name: redis-data
-            mountPath: /data
+            - mountPath: /data
+              name: redis-data
           envFrom:
-          - configMapRef:
-              name: redis-config
-          {{- end }}
-      {{- with .Values.volumes }}
+            - configMapRef:
+                name: redis-config
       volumes:
-      - name: redis-data
-        persistentVolumeClaim:
-          claimName: redis-pvc
-      {{- end }}
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: {{ include "redis.fullname" . }}-pvc
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

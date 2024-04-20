@@ -305,14 +305,14 @@ jobs:
         run: |
           # Update Nginx application
           if [ "$NGINX_CHANGED" == "true" ] || [ "$SECRET_CHANGED" = "true" ]; then
-            argocd app set dev-givegetgo-backend-nginx \
+            argocd app set givegetgo-backend-nginx \
               --helm-set image.repository="$ECR_REGISTRY/$NGINX_REPO_NAME" \
               --helm-set image.tag="dev-nginx-$IMAGE_TAG"
           fi
       
           # Update Redis application
           if [ "$REDIS_CHANGED" == "true" ] || [ "$SECRET_CHANGED" = "true" ]; then
-            argocd app set dev-givegetgo-redis \
+            argocd app set givegetgo-redis \
               --helm-set image.repository="$ECR_REGISTRY/$GIVEGETGO_REPO_NAME" \
               --helm-set image.tag="dev-redis-$IMAGE_TAG"
           fi
@@ -321,7 +321,7 @@ jobs:
           for service in user verification post bid match; do
             SERVICE_CHANGED="${service^^}_CHANGED"  # Convert service name to uppercase and append '_CHANGED'
             if [ "${!SERVICE_CHANGED}" == "true" ] || [ "$SECRET_CHANGED" = "true" ]; then
-              APP_NAME="dev-givegetgo-$service-backend"
+              APP_NAME="givegetgo-$service-backend"
               SERVICE_IMAGE_REPO="$ECR_REGISTRY/$GIVEGETGO_REPO_NAME"
               SERVICE_IMAGE_TAG="dev-${service}-$IMAGE_TAG"
       
