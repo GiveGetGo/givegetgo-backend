@@ -22,6 +22,8 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	// TODO: Add auth middleware
 	{
 		postAuthGroup.POST("/add", controller.AddPostHandler(postUtils))
+		postAuthGroup.GET("/getp", controller.GetPostHandler(postUtils))
+		postAuthGroup.DELETE("/delete", controller.DeletePostHandler(postUtils))
 	}
 
 	return r

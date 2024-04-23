@@ -1,7 +1,7 @@
 github.com/DATA-DOG/go-sqlmock v1.5.2 h1:OcvFkGmslmlZibjAjaHm3L//6LiuBgolP7OputlJIzU=
 github.com/DATA-DOG/go-sqlmock v1.5.2/go.mod h1:88MAG/4G7SMwSE3CeA0ZKzrT5CiOU3OJ+JlNzwDqpNU=
-github.com/GiveGetGo/shared v0.1.5 h1:wE1HPEkwVhpyAAcgNiFahuzG6KxLGFGipVaWcXb54kY=
-github.com/GiveGetGo/shared v0.1.5/go.mod h1:9WF2GGC0wrCp7SDl3oeZ3crBP9KnHfMkNKesSxzkJVU=
+github.com/GiveGetGo/shared v0.1.6 h1:GHqapsGNUjk6AdvH5JjND0Ng29cYN925LyEly7+iC18=
+github.com/GiveGetGo/shared v0.1.6/go.mod h1:9WF2GGC0wrCp7SDl3oeZ3crBP9KnHfMkNKesSxzkJVU=
 github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
 github.com/boombuler/barcode v1.0.1 h1:NDBbPmhS+EqABEs5Kg3n/5ZNjy73Pz7SIV+KCeqyXcs=
 github.com/boombuler/barcode v1.0.1/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
