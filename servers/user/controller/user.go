@@ -60,7 +60,7 @@ func RegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		}
 
 		// Create the user
-		user, err = userUtils.CreateUser(req.Email, req.Email, hashedPassword)
+		user, err = userUtils.CreateUser(req.Email, req.Email, hashedPassword, req.Class, req.Major)
 		if err != nil {
 			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return

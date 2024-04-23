@@ -1,12 +1,16 @@
 package schema
 
-import "time"
+import (
+	"time"
+)
 
 type User struct {
 	UserID          uint `gorm:"primaryKey"`
 	UserName        string
 	Email           string
 	HashedPassword  string
+	Class           string
+	Major           string
 	ProfileInfo     string
 	ReputationScore int
 	EmailVerified   bool

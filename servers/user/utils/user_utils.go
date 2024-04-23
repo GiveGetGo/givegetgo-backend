@@ -22,7 +22,7 @@ import (
 type IUserUtils interface {
 	GetUserByID(userID uint) (schema.User, error)
 	GetUserByEmail(email string) (schema.User, error)
-	CreateUser(username, email, hashedPassword string) (schema.User, error)
+	CreateUser(username, email, hashedPassword string, class string, major string) (schema.User, error)
 	ValidatePassword(password string) error
 	HashPassword(password string) (string, error)
 	AuthenticateUser(user schema.User, password string) bool
@@ -74,12 +74,14 @@ func (u *UserUtils) GetUserByEmail(email string) (schema.User, error) {
 }
 
 // CreateUser creates a user
-func (u *UserUtils) CreateUser(username, email, hashedPassword string) (schema.User, error) {
+func (u *UserUtils) CreateUser(username, email, hashedPassword string, class string, major string) (schema.User, error) {
 	// create the user
 	user := schema.User{
 		UserName:       username,
 		Email:          email,
 		HashedPassword: hashedPassword,
+		Class:          class,
+		Major:          major,
 	}
 	err := u.DB.Create(&user).Error
 	if err != nil {
