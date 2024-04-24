@@ -7,9 +7,12 @@ import (
 )
 
 type IBidUtils interface {
-	GetbidByID(bidID uint) (schema.Bid, error)
-	Addbid(bid schema.Bid) (schema.Bid, error)
+	GetBidByID(bidID uint) ([]schema.Bid, error)
+	AddBid(bid schema.Bid) (schema.Bid, error)
 }
+
+// Ensure PostUtils implements IPostUtils
+var _ IBidUtils = (*BidUtils)(nil)
 
 type BidUtils struct {
 	DB          db.Database
@@ -25,14 +28,13 @@ func NewBidUtils(DB db.Database, redisClient middleware.RedisClientInterface) *B
 }
 
 // func GetBidByID retrieves a bid by its ID
-func (bu *BidUtils) GetBidByID(bidID uint) (schema.Bid, error) {
-	var bid schema.Bid
-	err := bu.DB.First(&bid, bidID).Error
-	if err != nil {
-		return schema.Bid{}, err
-	}
-
-	return bid, nil
+func (bu *BidUtils) GetBidByID(postID uint) ([]schema.Bid, error) {
+    var bids []schema.Bid
+    err := bu.DB.Where("post_id = ?", postID).Find(&bids).Error
+    if err != nil {
+        return nil, err
+    }
+    return bids, nil
 }
 
 // func Addbid adds a bid to the database

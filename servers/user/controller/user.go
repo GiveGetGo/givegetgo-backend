@@ -17,8 +17,16 @@ import (
 func RegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Parse the request body
+		log.Println("RegisterHandler called")
+
 		var req types.RegisterRequest
+		//if err := c.BindJSON(&req); err != nil {
+		//	types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+		//	return
+		//}
+
 		if err := c.BindJSON(&req); err != nil {
+			log.Printf("Error binding JSON: %v", err)
 			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
@@ -60,14 +68,14 @@ func RegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		}
 
 		// Create the user
-		user, err = userUtils.CreateUser(req.Email, req.Email, hashedPassword, req.Class, req.Major)
+		user, err = userUtils.CreateUser(req.Email, hashedPassword, req.Class, req.Major)
 		if err != nil {
 			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		// request the verification server to send a verification email
-		err = userUtils.RequestRegisterVerificationEmail(user.UserID, req.Email, req.Email)
+		err = userUtils.RequestRegisterVerificationEmail(user.UserID, req.Email)
 		if err != nil {
 			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
