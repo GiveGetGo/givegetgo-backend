@@ -39,3 +39,4 @@ spec:
         - name: postgres-storage
           persistentVolumeClaim:
             claimName: {{ include "post-postgres.fullname" . }}-pvc
+

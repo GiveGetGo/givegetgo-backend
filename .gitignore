@@ -11,8 +11,11 @@ servers/verification/.env.verification
 servers/post/.env.post
 servers/bid/.env.bid
 servers/match/.env.match
-servers/redis/.env.redis
+redis/.env.redis
 .env
 
-# config files
+# redis
 redis.conf
+
+# service env files
+*-encoded.txt

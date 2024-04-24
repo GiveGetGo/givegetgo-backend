@@ -6,15 +6,124 @@ on:
       - main
 
 jobs:
-  deploy:
+  # Check secrets changes
+  check-secrets-changes:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    outputs:
+      secrets-changed: ${{ steps.secrets-version-check.outputs.secrets-changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all commits to get the previous commit
+  
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }} 
+
+      - name: Check for secrets version changes
+        id: secrets-version-check
+        run: |
+          current_version=$(kubectl get configmap givegetgo-secrets-version -o=jsonpath='{.data.version}')
+          echo "Current EKS secrets version: $current_version"
+          echo "Secrets version from GitHub: ${{ secrets.SECRETS_VERSION }}"
+          if [ "$current_version" != "${{ secrets.SECRETS_VERSION }}" ]; then
+            echo "secrets-changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "secrets-changed=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Check code changes
+  check-code-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      nginx-changed: ${{ steps.check-changes.outputs.nginx-changed }}
+      user-changed: ${{ steps.check-changes.outputs.user-changed }}
+      verification-changed: ${{ steps.check-changes.outputs.verification-changed }}
+      post-changed: ${{ steps.check-changes.outputs.post-changed }}
+      bid-changed: ${{ steps.check-changes.outputs.bid-changed }}
+      match-changed: ${{ steps.check-changes.outputs.match-changed }}
+      redis-changed: ${{ steps.check-changes.outputs.redis-changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all commits to get the previous commit
+
+      - name: Check for code changes
+        id: check-changes
+        run: |
+          # Get the previous commit on the development branch
+          prev_commit=$(git rev-parse development^1)
+          
+          # Check if there are any changes in specific files/directories
+          nginx_changed=$(git diff --quiet $prev_commit HEAD -- ./nginx || echo 'true')
+          user_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/user || echo 'true')
+          verification_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/verification || echo 'true')
+          post_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/post || echo 'true')
+          bid_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/bid || echo 'true')
+          match_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/match || echo 'true')
+          redis_changed=$(git diff --quiet $prev_commit HEAD -- ./redis || echo 'true')
+          
+          # Output the results as step outputs
+          echo "nginx-changed=$nginx_changed" >> $GITHUB_OUTPUT
+          echo "user-changed=$user_changed" >> $GITHUB_OUTPUT
+          echo "verification-changed=$verification_changed" >> $GITHUB_OUTPUT
+          echo "post-changed=$post_changed" >> $GITHUB_OUTPUT
+          echo "bid-changed=$bid_changed" >> $GITHUB_OUTPUT
+          echo "match-changed=$match_changed" >> $GITHUB_OUTPUT
+          echo "redis-changed=$redis_changed" >> $GITHUB_OUTPUT
+
+  # Build and push Docker images to ECR
+  deploy-images-ecr:
+    runs-on: ubuntu-latest
+    needs: [check-code-changes, check-secrets-changes]
+    if: |
+      github.ref == 'refs/heads/main' &&
+      (
+        needs.check-code-changes.outputs.nginx-changed == 'true' ||
+        needs.check-code-changes.outputs.user-changed == 'true' ||
+        needs.check-code-changes.outputs.verification-changed == 'true' ||
+        needs.check-code-changes.outputs.post-changed == 'true' ||
+        needs.check-code-changes.outputs.bid-changed == 'true' ||
+        needs.check-code-changes.outputs.match-changed == 'true' ||
+        needs.check-code-changes.outputs.redis-changed == 'true' ||
+        needs.check-secrets-changes.outputs.secrets-changed == 'true'
+      )
+    env:
+      ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+      NGINX_REPO_NAME: ${{ secrets.AWS_ECR_NGINX_REPO }}
+      GIVEGETGO_REPO_NAME: ${{ secrets.AWS_ECR_GIVEGETGO_REPO }}
+      NGINX_CHANGED: ${{ needs.check-code-changes.outputs.nginx-changed }}
+      REDIS_CHANGED: ${{ needs.check-code-changes.outputs.redis-changed }}
+      USER_CHANGED: ${{ needs.check-code-changes.outputs.user-changed }}
+      VERIFICATION_CHANGED: ${{ needs.check-code-changes.outputs.verification-changed }}
+      POST_CHANGED: ${{ needs.check-code-changes.outputs.post-changed }}
+      BID_CHANGED: ${{ needs.check-code-changes.outputs.bid-changed }}
+      MATCH_CHANGED: ${{ needs.check-code-changes.outputs.match-changed }}
+      SECRETS_CHANGED: ${{ needs.check-secrets-changes.outputs.secrets-changed }}
+    outputs:
+      image-tag: ${{ steps.generate-image-tag.outputs.image_tag }}
     steps:
       # Checkout the repository
       - name: Checkout
         uses: actions/checkout@v4
+      
+      # Generate image tag
+      - name: Generate image tag
+        id: generate-image-tag 
+        run: |
+          image_tag=$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)
+          echo "IMAGE_TAG=$image_tag" >> $GITHUB_ENV
+          echo "image_tag=$image_tag" >> $GITHUB_OUTPUT
 
-      # Setup for deployment, e.g., configure AWS credentials
+      # Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -34,8 +143,7 @@ jobs:
       #     echo "::set-output name=user_service_changed::$(git diff --name-only ${{ github.sha }} ${{ github.event.before }} | grep -q 'servers/user' && echo 'true' || echo 'false')"
       #     echo "::set-output name=verification_service_changed::$(git diff --name-only ${{ github.sha }} ${{ github.event.before }} | grep -q 'servers/verification' && echo 'true' || echo 'false')"
 
-      # Set up Docker environment variables
-      - name: Set up Docker environment variables
+      - name: Generate environment files for Docker Compose
         run: |
           echo "ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com" >> $GITHUB_ENV
           echo "NGINX_REPO_NAME=${{ secrets.AWS_ECR_NGINX_REPO }}" >> $GITHUB_ENV

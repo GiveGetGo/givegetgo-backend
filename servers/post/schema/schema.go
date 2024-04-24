@@ -10,6 +10,14 @@ const (
 	Expired PostStatus = "Expired"
 )
 
+type PostStatus string
+
+const (
+	Active  PostStatus = "Active"
+	Closed  PostStatus = "Closed"
+	Expired PostStatus = "Expired"
+)
+
 type Post struct {
 	PostID      uint `gorm:"primaryKey"`
 	UserID      uint `gorm:"index"`

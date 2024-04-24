@@ -5,6 +5,7 @@ import (
 	"user/middleware"
 	"user/utils"
 
+	sharedController "github.com/GiveGetGo/shared/controller"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -23,6 +24,7 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	unAuthGroup := r.Group("/v1")
 	unAuthGroup.Use(rateLimiter) // Apply rate limiter
 	{
+		unAuthGroup.GET("/user/health", sharedController.HealthCheckHandler())
 		unAuthGroup.POST("/user/register", controller.RegisterHandler(userUtils))
 		unAuthGroup.POST("/user/login", controller.LoginHandler(userUtils))
 	}

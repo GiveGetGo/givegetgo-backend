@@ -4,6 +4,7 @@ import (
 	"match/controller"
 	"match/utils"
 
+	sharedController "github.com/GiveGetGo/shared/controller"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -18,6 +19,7 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	// Public routes - without auth middleware
 	matchGroup := r.Group("/v1/match")
 	{
+		matchGroup.GET("/health", sharedController.HealthCheckHandler())
 		matchGroup.POST("/match", controller.AddMatchHandler(matchUtils))
 	}
 

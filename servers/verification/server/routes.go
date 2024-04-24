@@ -5,6 +5,7 @@ import (
 	"verification/middleware"
 	"verification/utils"
 
+	sharedController "github.com/GiveGetGo/shared/controller"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -17,6 +18,10 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	verificationUtils := utils.NewVerificationUtils(DB, redisClient)
 
 	// Public routes - without auth middleware
+	unAuthGroup := r.Group("/v1")
+	{
+		unAuthGroup.GET("/verification/health", sharedController.HealthCheckHandler())
+	}
 
 	// Public routes - with auth middleware
 	verificationAuthGroup := r.Group("/v1/verification")

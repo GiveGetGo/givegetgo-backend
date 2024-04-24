@@ -86,9 +86,11 @@ func TestCreateUser(t *testing.T) {
 		userName := "testuser"
 		email := "test@purdue.edu"
 		hashedPassword := "hashedPassword"
-		mockDB.EXPECT().Create(&schema.User{UserName: userName, Email: email, HashedPassword: hashedPassword}).Return(&gorm.DB{Error: nil}) // Expect database create call to succeed
+		class := "2024"
+		major := "CompE"
+		mockDB.EXPECT().Create(&schema.User{UserName: userName, Email: email, HashedPassword: hashedPassword, Class: class, Major: major}).Return(&gorm.DB{Error: nil}) // Expect database create call to succeed
 
-		user, err := userUtils.CreateUser(userName, email, hashedPassword)
+		user, err := userUtils.CreateUser(userName, email, hashedPassword, class, major)
 		assert.NoError(t, err)
 		assert.NotEqual(t, user, schema.User{})
 	})
