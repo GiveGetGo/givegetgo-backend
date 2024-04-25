@@ -24,6 +24,9 @@ WORKDIR /root/
 # Copy the .env file specific to the verification service
 COPY .env.user /root/.env.user
 
+# Copy the configuration directory
+COPY --from=builder /app/config /root/config
+
 # Copy the pre-built binary file from the previous stage
 COPY --from=builder /app/main .
 

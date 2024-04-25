@@ -8,7 +8,9 @@ import (
 	"user/schema"
 	"user/utils"
 
+	"github.com/GiveGetGo/shared/res"
 	"github.com/GiveGetGo/shared/types"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -19,14 +21,14 @@ func RegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// Parse the request body
 		var req types.RegisterRequest
 		if err := c.BindJSON(&req); err != nil {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
 
 		// Check if the email is in the correct format
 		matched, _ := regexp.MatchString(`^[a-zA-Z0-9]+@purdue\.edu$`, req.Email)
 		if !matched {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidEmail())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidEmail())
 			return
 		}
 
@@ -35,46 +37,56 @@ func RegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 
 		// If no error, or the error is not a record not found error, return an internal server error
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		// If the user exists, return an error
 		if (schema.User{}) != user {
-			types.ResponseError(c, http.StatusBadRequest, types.AlreadyExists())
+			res.ResponseError(c, http.StatusBadRequest, types.AlreadyExists())
 			return
 		}
 
 		// Check if the password is valid
 		err = userUtils.ValidatePassword(req.Password)
 		if err != nil {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidCredentials())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidCredentials())
 			return
 		}
 
 		// hash the password
 		hashedPassword, err := userUtils.HashPassword(req.Password)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		// Create the user
 		user, err = userUtils.CreateUser(req.Email, req.Email, hashedPassword, req.Class, req.Major)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		// request the verification server to send a verification email
 		err = userUtils.RequestRegisterVerificationEmail(user.UserID, req.Email, req.Email)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			return
+		}
+
+		// add user id to session
+		session := sessions.Default(c)
+		session.Set("userid", user.UserID)
+		err = session.Save()
+		if err != nil {
+			log.Println("err is ", err)
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		// Return the user
-		types.ResponseSuccess(c, http.StatusCreated, "register", user.UserID, types.UserCreated())
+		res.ResponseSuccess(c, http.StatusCreated, "register", types.UserCreated())
 	}
 }
 
@@ -82,30 +94,46 @@ func LoginHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req types.LoginRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
 
 		// Check if the email is already registered
 		user, err := userUtils.GetUserByEmail(req.Email)
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		// If email not verified, return an error
 		if !user.EmailVerified {
-			types.ResponseError(c, http.StatusBadRequest, types.EmailNotVerified())
+			// resend verification email if not verified
+			err = userUtils.RequestRegisterVerificationEmail(user.UserID, req.Email, req.Email)
+			if err != nil {
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+				return
+			}
+
+			res.ResponseError(c, http.StatusBadRequest, types.EmailNotVerified())
 			return
 		}
 
 		authenticated := userUtils.AuthenticateUser(user, req.Password)
 		if !authenticated {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidCredentials())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidCredentials())
 			return
 		}
 
-		types.ResponseSuccess(c, http.StatusOK, "login", user.UserID, types.LoginSuccess())
+		// set session
+		session := sessions.Default(c)
+		session.Set("userid", user.UserID)
+		err = session.Save()
+		if err != nil {
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			return
+		}
+
+		res.ResponseSuccess(c, http.StatusOK, "login", types.LoginSuccess())
 	}
 }
 
@@ -114,14 +142,14 @@ func ForgotPasswordHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		var req types.UserForgetPassRequest
 		// Parse and validate the request body
 		if err := c.ShouldBindJSON(&req); err != nil {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
 
 		// Check if the email is in the correct format
 		matched, _ := regexp.MatchString(`^[a-zA-Z0-9]+@purdue\.edu$`, req.Email)
 		if !matched {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidEmail())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidEmail())
 			return
 		}
 
@@ -129,12 +157,12 @@ func ForgotPasswordHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		user, err := userUtils.GetUserByEmail(req.Email)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				types.ResponseError(c, http.StatusBadRequest, types.UserNotFound())
+				res.ResponseError(c, http.StatusBadRequest, types.UserNotFound())
 				return
 			}
 
 			// Handle internal server error
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
@@ -142,11 +170,11 @@ func ForgotPasswordHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// if the verification server is down, return an internal server error
 		err = userUtils.RequestForgetpassVerificationEmail(user.UserID, user.UserName, req.Email)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
-		types.ResponseSuccess(c, http.StatusOK, "forgot-password", user.UserID, types.Success())
+		res.ResponseSuccess(c, http.StatusOK, "forgot-password", types.Success())
 	}
 }
 
@@ -156,7 +184,7 @@ func ResetPasswordHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// Parse the request body
 		var req types.UserResetPassRequest
 		if err := c.BindJSON(&req); err != nil {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
 
@@ -164,12 +192,12 @@ func ResetPasswordHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		user, err := userUtils.GetUserByEmail(req.Email)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				types.ResponseError(c, http.StatusBadRequest, types.UserNotFound())
+				res.ResponseError(c, http.StatusBadRequest, types.UserNotFound())
 				return
 			}
 
 			// Handle internal server error
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
@@ -178,33 +206,33 @@ func ResetPasswordHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// check if session is valid
 		err = userUtils.CheckEmailVerificationSession(ctx, user.UserID, types.ResetPasswordEvent)
 		if err != nil {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidSession())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidSession())
 			return
 		}
 
 		// Check if the password is valid
 		err = userUtils.ValidatePassword(req.Newpassword)
 		if err != nil {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidCredentials())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidCredentials())
 			return
 		}
 
 		// hash the password
 		hashedPassword, err := userUtils.HashPassword(req.Newpassword)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		// Update the user's password
 		err = userUtils.UpdatePassword(user.UserID, hashedPassword)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		// Return success
-		types.ResponseSuccess(c, http.StatusOK, "reset-password", user.UserID, types.Success())
+		res.ResponseSuccess(c, http.StatusOK, "reset-password", types.Success())
 	}
 }
 
@@ -214,7 +242,7 @@ func SetUserEmailVerifiedHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// Parse the request body
 		var req types.SetUserEmailVerifiedRequest
 		if err := c.BindJSON(&req); err != nil {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
 
@@ -222,30 +250,117 @@ func SetUserEmailVerifiedHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		user, err := userUtils.GetUserByEmail(req.Email)
 		if err != nil {
 			log.Println(err)
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		// If the user not found, return an error
 		if (schema.User{}) == user {
-			types.ResponseError(c, http.StatusBadRequest, types.UserNotFound())
+			res.ResponseError(c, http.StatusBadRequest, types.UserNotFound())
 			return
 		}
 
 		// If the user's email is already verified, return an error
 		if user.EmailVerified {
-			types.ResponseError(c, http.StatusBadRequest, types.AlreadyVerified())
+			res.ResponseError(c, http.StatusBadRequest, types.AlreadyVerified())
 			return
 		}
 
 		// Update the user's email to verified
 		err = userUtils.MarkEmailVerified(req.Email)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		// Return success
-		types.ResponseSuccess(c, http.StatusOK, "set-email-verified", user.UserID, types.EmailVerified())
+		res.ResponseSuccess(c, http.StatusOK, "set-email-verified", types.EmailVerified())
+	}
+}
+
+// Logout handler for session termination
+func LogoutHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session := sessions.Default(c)
+		session.Clear()
+		err := session.Save()
+		if err != nil {
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+		}
+
+		res.ResponseSuccess(c, http.StatusOK, "logout", types.Success())
+	}
+}
+
+// Handle user session for internal session authentication between services
+func SessionHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		res.ResponseSuccess(c, http.StatusOK, "session", types.Success())
+	}
+}
+
+// User Info
+func GetMeHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session := sessions.Default(c)
+		userIdValue := session.Get("userid")
+		if userIdValue == nil {
+			res.ResponseError(c, http.StatusUnauthorized, types.InvalidCredentials())
+			return
+		}
+
+		userId, ok := userIdValue.(uint)
+		if !ok {
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			return
+		}
+
+		user, err := userUtils.GetUserByID(uint(userId))
+		if err != nil {
+			res.ResponseError(c, http.StatusNotFound, types.UserNotFound())
+			return
+		}
+
+		responseInfo := types.UserInfoResponse{
+			UserID:        user.UserID,
+			Username:      user.UserName,
+			Email:         user.Email,
+			Class:         user.Class,
+			Major:         user.Major,
+			EmailVerified: user.EmailVerified,
+			MfaVerified:   user.MFAVerified,
+		}
+
+		res.ResponseSuccessWithData(c, http.StatusOK, "get user info", types.Success(), responseInfo)
+	}
+}
+
+func EditMeHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session := sessions.Default(c)
+		userIdValue := session.Get("userid")
+		if userIdValue == nil {
+			res.ResponseError(c, http.StatusUnauthorized, types.InvalidCredentials())
+			return
+		}
+
+		userId, ok := userIdValue.(uint)
+		if !ok {
+			res.ResponseError(c, http.StatusUnauthorized, types.InvalidCredentials())
+			return
+		}
+
+		var updateReq types.UserUpdateRequest
+		if err := c.BindJSON(&updateReq); err != nil {
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			return
+		}
+
+		if err := userUtils.UpdateUser(userId, updateReq); err != nil {
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			return
+		}
+
+		res.ResponseSuccess(c, http.StatusOK, "User updated", types.Success())
 	}
 }

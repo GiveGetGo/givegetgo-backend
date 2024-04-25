@@ -2,6 +2,7 @@ package server
 
 import (
 	"post/controller"
+	"post/middleware"
 	"post/utils"
 
 	sharedController "github.com/GiveGetGo/shared/controller"
@@ -21,14 +22,25 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	{
 		unAuthGroup.GET("/post/health", sharedController.HealthCheckHandler())
 	}
-	
+
 	// Public routes - with auth middleware
-	postAuthGroup := r.Group("/v1/post")
-	// TODO: Add auth middleware
+	postAuthGroup := r.Group("/v1")
+	postAuthGroup.Use(middleware.AuthMiddleware())
 	{
-		postAuthGroup.POST("/add", controller.AddPostHandler(postUtils))
-		postAuthGroup.GET("/getp", controller.GetPostHandler(postUtils))
-		postAuthGroup.DELETE("/delete", controller.DeletePostHandler(postUtils))
+		postAuthGroup.POST("/post", controller.AddPostHandler(postUtils))
+		postAuthGroup.GET("/post", controller.GetPostHandler(postUtils))
+		postAuthGroup.GET("/post/archive", controller.GetPostArchiveHandler(postUtils))
+		postAuthGroup.GET("/post/by-user", controller.GetPostByUserIdHandler(postUtils))
+		postAuthGroup.GET("/post/:id", controller.GetPostByPostIdHandler(postUtils))
+		postAuthGroup.PUT("/post/:id", controller.EditPostByIdHandler(postUtils))
+		postAuthGroup.DELETE("/post/:id", controller.DeletePostHandler(postUtils))
+	}
+
+	// interal routes
+	postInternalGroup := r.Group("/v1/internal")
+	postInternalGroup.Use(middleware.InternalAuthMiddleware())
+	{
+		postInternalGroup.PUT("/post/status", controller.UpdatePostStatusHandler(postUtils))
 	}
 
 	return r

@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"user/utils"
 
+	"github.com/GiveGetGo/shared/res"
 	"github.com/GiveGetGo/shared/types"
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
@@ -22,7 +23,7 @@ func RequestMFAVerificationHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// Parse the request body
 		var req types.MFAVerificationRequest
 		if err := c.BindJSON(&req); err != nil {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
 
@@ -35,13 +36,13 @@ func RequestMFAVerificationHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 
 		// Check if the user's email is verified
 		if !user.EmailVerified {
-			types.ResponseError(c, http.StatusBadRequest, types.EmailNotVerified())
+			res.ResponseError(c, http.StatusBadRequest, types.EmailNotVerified())
 			return
 		}
 
 		// Check if the user is already MFA verified
 		if user.MFAVerified {
-			types.ResponseError(c, http.StatusBadRequest, types.AlreadyVerified())
+			res.ResponseError(c, http.StatusBadRequest, types.AlreadyVerified())
 			return
 		}
 
@@ -52,7 +53,7 @@ func RequestMFAVerificationHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		})
 		if err != nil {
 			log.Println(err)
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
@@ -60,13 +61,13 @@ func RequestMFAVerificationHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		key, err := hex.DecodeString(os.Getenv("MFA_SECRET_KEY"))
 		if err != nil {
 			log.Println(err)
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		encryptedSecret, err := utils.Encrypt([]byte(secret.Secret()), key)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
@@ -74,11 +75,11 @@ func RequestMFAVerificationHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		encryptedSecretBase64 := base64.StdEncoding.EncodeToString(encryptedSecret)
 		err = userUtils.StoreEncryptedTOTPSecret(req.UserID, encryptedSecretBase64)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
-		types.ResponseSuccess(c, http.StatusOK, "request-mfa", req.UserID, types.Success())
+		res.ResponseSuccess(c, http.StatusOK, "request-mfa", types.Success())
 	}
 }
 
@@ -87,14 +88,14 @@ func VerifyMFAHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req types.VerifyMFARequest
 		if err := c.BindJSON(&req); err != nil {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
 
 		// Retrieve the user's encrypted TOTP secret from the database.
 		user, err := userUtils.GetUserByID(req.UserID)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
@@ -102,38 +103,38 @@ func VerifyMFAHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		keyHex := os.Getenv("MFA_SECRET_KEY")
 		key, err := hex.DecodeString(keyHex)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		encryptedSecret, err := base64.StdEncoding.DecodeString(user.MFASecret)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		// Decrypt the TOTP secret.
 		decryptedSecret, err := utils.Decrypt(encryptedSecret, key)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		// Validate the TOTP code.
 		isValid := totp.Validate(req.VerificationCode, string(decryptedSecret))
 		if !isValid {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidVerification())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidVerification())
 			return
 		}
 
 		// Mark the user as MFA verified.
 		err = userUtils.MarkMFAVerified(req.UserID)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
-		types.ResponseSuccess(c, http.StatusOK, "verify-mfa", req.UserID, types.MFAVerified())
+		res.ResponseSuccess(c, http.StatusOK, "verify-mfa", types.MFAVerified())
 	}
 }
 
@@ -143,14 +144,14 @@ func MFAQRCodeHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		userID := c.Param("userid") // Assuming you're getting the userID from the URL
 		userIDUint, err := strconv.ParseUint(userID, 10, 64)
 		if err != nil {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
 
 		// Get the user
 		user, err := userUtils.GetUserByID(uint(userIDUint))
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
@@ -158,7 +159,7 @@ func MFAQRCodeHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		encryptedSecretBase64 := user.MFASecret
 		encryptedSecret, err := base64.StdEncoding.DecodeString(encryptedSecretBase64)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
@@ -166,13 +167,13 @@ func MFAQRCodeHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		keyHex := os.Getenv("MFA_SECRET_KEY")
 		key, err := hex.DecodeString(keyHex)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
 		decryptedSecret, err := utils.Decrypt(encryptedSecret, key)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
@@ -182,7 +183,7 @@ func MFAQRCodeHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// Generate the QR code
 		qrCode, err := qrcode.Encode(uri, qrcode.Medium, 256)
 		if err != nil {
-			types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 

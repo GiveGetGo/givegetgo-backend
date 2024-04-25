@@ -14,15 +14,25 @@ import (
 	"user/middleware"
 	"user/schema"
 
+	"github.com/GiveGetGo/shared/types"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // IUserUtils is the interface for the user utils for mocking
 type IUserUtils interface {
+	// Create
+	CreateUser(username, email, hashedPassword string, class string, major string) (schema.User, error)
+
+	// Get info
 	GetUserByID(userID uint) (schema.User, error)
 	GetUserByEmail(email string) (schema.User, error)
-	CreateUser(username, email, hashedPassword string, class string, major string) (schema.User, error)
+
+	// Update
+	UpdateUser(userID uint, updates types.UserUpdateRequest) error
+	UpdatePassword(userID uint, hashedPassword string) error
+
+	// Others
 	ValidatePassword(password string) error
 	HashPassword(password string) (string, error)
 	AuthenticateUser(user schema.User, password string) bool
@@ -32,7 +42,6 @@ type IUserUtils interface {
 	MarkMFAVerified(userID uint) error
 	StoreEncryptedTOTPSecret(userID uint, encryptedSecret string) error
 	CheckEmailVerificationSession(ctx context.Context, userID uint, event string) error
-	UpdatePassword(userID uint, hashedPassword string) error
 }
 
 type UserUtils struct {
@@ -334,4 +343,14 @@ func (u *UserUtils) UpdatePassword(userID uint, hashedPassword string) error {
 
 	// Return the updated user object and nil for the error
 	return nil
+}
+
+func (u *UserUtils) UpdateUser(userID uint, updates types.UserUpdateRequest) error {
+	updateMap := map[string]interface{}{
+		"username":     updates.Username,
+		"class":        updates.Class,
+		"major":        updates.Major,
+		"profile_info": updates.ProfileInfo,
+	}
+	return u.DB.Model(&schema.User{}).Where("user_id = ?", userID).Updates(updateMap).Error
 }

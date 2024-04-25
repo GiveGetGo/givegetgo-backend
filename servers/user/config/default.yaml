@@ -1,0 +1,6 @@
+session:
+  path: /
+  max_age: 86400
+  secure: false
+  http_only: true
+  domain: api.givegetgo.xyz
