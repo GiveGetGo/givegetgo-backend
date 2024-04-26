@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"verification/utils"
 
+	"github.com/GiveGetGo/shared/res"
 	"github.com/GiveGetGo/shared/types"
 	"github.com/gin-gonic/gin"
 )
@@ -17,7 +18,7 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 		var req types.GetEmailVerificationRequest
 		if err := c.BindJSON(&req); err != nil {
 			log.Println("Error parsing request body: ", err)
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
 
@@ -28,7 +29,7 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 		matched, _ := regexp.MatchString(`^[a-zA-Z0-9]+@purdue\.edu$`, req.Email)
 		if !matched {
 			log.Println("Invalid email: ", req.Email)
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidEmail())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidEmail())
 			return
 		}
 
@@ -38,47 +39,47 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 			// generate a verification code
 			verificationCode, err := verificationUtils.GenerateRegisterVerificationCode(req.UserID)
 			if err != nil {
-				types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 				return
 			}
 
 			// send the verification code to the user
 			err = verificationUtils.SendRegisterVerificationCode(req.UserName, req.Email, verificationCode)
 			if err != nil {
-				types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 				return
 			}
 
-			types.ResponseSuccess(c, http.StatusOK, "request-email-verification", req.UserID, types.Success())
+			res.ResponseSuccess(c, http.StatusOK, "request-email-verification", types.Success())
 
 		case types.ResetPasswordEvent:
 			// generate a verification code
 			verificationCode, err := verificationUtils.GenerateResetPasswordVerificationCode(req.UserID)
 			if err != nil {
-				types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 				return
 			}
 
 			// send the verification code to the user
 			err = verificationUtils.SendResetPasswordVerificationCode(req.UserName, req.Email, verificationCode)
 			if err != nil {
-				types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 				return
 			}
 
 			// generate a session for the user
 			err = verificationUtils.GenerateVerifiedSession(ctx, req.UserID, types.ResetPasswordEvent)
 			if err != nil {
-				types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 				return
 			}
 
 			// return verification success
-			types.ResponseSuccess(c, http.StatusOK, "request-email-verification", req.UserID, types.Success())
+			res.ResponseSuccess(c, http.StatusOK, "request-email-verification", types.Success())
 
 		default:
 			log.Println("Invalid event: ", req.Event)
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
 	}
@@ -90,7 +91,7 @@ func VerifyEmailVerificationHandler(verificationUtils utils.IVerificationUtils) 
 		// Parse the request body
 		var req types.EmailVerifyRequest
 		if err := c.BindJSON(&req); err != nil {
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
 
@@ -101,44 +102,44 @@ func VerifyEmailVerificationHandler(verificationUtils utils.IVerificationUtils) 
 			// query the latest verification code for the email
 			latestVerificationCode, err := verificationUtils.GetLatestRegisterVerificationCode(req.UserID)
 			if err != nil {
-				types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 				return
 			}
 
 			// check if the verification code is correct
 			if latestVerificationCode != req.VerificationCode {
-				types.ResponseError(c, http.StatusBadRequest, types.InvalidVerification())
+				res.ResponseError(c, http.StatusBadRequest, types.InvalidVerification())
 				return
 			}
 
 			// hit user_server to set the user's email to verified
 			err = verificationUtils.RequestEmailVerified(req.Email)
 			if err != nil {
-				types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 				return
 			}
 
-			types.ResponseSuccess(c, http.StatusOK, "verify-email", req.UserID, types.Success())
+			res.ResponseSuccess(c, http.StatusOK, "verify-email", types.Success())
 
 		case types.ResetPasswordEvent:
 			// verify the verification code
 			// query the latest verification code for the email
 			latestVerificationCode, err := verificationUtils.GetLatestResetPasswordVerificationCode(req.UserID)
 			if err != nil {
-				types.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 				return
 			}
 
 			// check if the verification code is correct
 			if latestVerificationCode != req.VerificationCode {
-				types.ResponseError(c, http.StatusBadRequest, types.InvalidVerification())
+				res.ResponseError(c, http.StatusBadRequest, types.InvalidVerification())
 				return
 			}
 
-			types.ResponseSuccess(c, http.StatusOK, "verify-email", req.UserID, types.Success())
+			res.ResponseSuccess(c, http.StatusOK, "verify-email", types.Success())
 
 		default:
-			types.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
 	}

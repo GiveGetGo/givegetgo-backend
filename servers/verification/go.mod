@@ -3,13 +3,13 @@ module verification
 go 1.22.0
 
 require (
-	github.com/GiveGetGo/shared v0.2.0
+	github.com/GiveGetGo/shared v0.2.8
 	github.com/gin-gonic/gin v1.9.1
 	github.com/golang/mock v1.6.0
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/sendgrid/sendgrid-go v3.14.0+incompatible
-	gorm.io/driver/postgres v1.5.6
-	gorm.io/gorm v1.25.7
+	gorm.io/driver/postgres v1.5.7
+	gorm.io/gorm v1.25.8
 )
 
 require (

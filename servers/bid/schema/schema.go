@@ -11,11 +11,18 @@ const (
 )
 
 type Bid struct {
-	BidID           uint `gorm:"primaryKey"`
-	PostID          uint `gorm:"index"`
-	UserID          uint `gorm:"index"`
-	BidDescription  string
-	TermsConditions string
-	DateSubmitted   time.Time
-	Status          BidStatus
+	BidID          uint `gorm:"primaryKey"`
+	PostID         uint `gorm:"index"`
+	UserID         uint `gorm:"index"`
+	Username       string
+	BidDescription string
+	DateSubmitted  time.Time
+	Status         BidStatus
+}
+
+type BidInfoResponse struct {
+	UserID         uint   `json:"userID"`
+	Username       string `json:"username"`
+	BidDescription string `json:"BidDescription"`
+	DateSubmitted  string `json:"DateSubmitted"`
 }

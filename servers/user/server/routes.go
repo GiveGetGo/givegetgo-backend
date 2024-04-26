@@ -1,11 +1,13 @@
 package server
 
 import (
+	"user/config"
 	"user/controller"
 	"user/middleware"
 	"user/utils"
 
 	sharedController "github.com/GiveGetGo/shared/controller"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -14,11 +16,11 @@ import (
 func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	r := gin.Default()
 
-	// Set up user utils
-	userUtils := utils.NewUserUtils(DB, redisClient)
+	store := config.InitSession()                // Initialize session store using config
+	r.Use(sessions.Sessions("givegetgo", store)) // Use sessions with the store
 
-	// Set up rate limiter
-	rateLimiter := middleware.SetupRateLimiter(redisClient)
+	userUtils := utils.NewUserUtils(DB, redisClient)        // Set up user utils
+	rateLimiter := middleware.SetupRateLimiter(redisClient) // Setup Rate limiter
 
 	// Public routes - without auth middleware
 	unAuthGroup := r.Group("/v1")
@@ -31,10 +33,14 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 
 	// Public routes - with auth middleware
 	authGroup := r.Group("/v1")
+	authGroup.Use(middleware.AuthMiddleware())
 	authGroup.Use(rateLimiter) // Apply rate limiter
 	{
 		userGroup := authGroup.Group("/user")
 		{
+			userGroup.GET("/session", controller.SessionHandler(userUtils))
+			userGroup.GET("/me", controller.GetMeHandler(userUtils))
+			userGroup.PUT("/me", controller.EditMeHandler(userUtils))
 			userGroup.POST("/forgot-password", controller.ForgotPasswordHandler(userUtils))
 			userGroup.POST("/reset-password", controller.ResetPasswordHandler(userUtils))
 		}
@@ -49,6 +55,7 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 
 	// Internal routes - with auth middleware
 	internalGroup := r.Group("/v1/internal")
+	internalGroup.Use(middleware.InternalAuthMiddleware())
 	{
 		internalGroup.POST("/user/email-verified", controller.SetUserEmailVerifiedHandler(userUtils))
 	}

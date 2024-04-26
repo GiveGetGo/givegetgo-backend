@@ -1,0 +1,5 @@
+session:
+  max_age: 3600
+  path: /
+  domain: localhost
+  http_only: true

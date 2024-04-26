@@ -1,5 +1,6 @@
 services:
   nginx:
+    container_name: givegetgo-backend-nginx
     build:
       context: ./nginx
     ports:
@@ -15,6 +16,7 @@ services:
       - givegetgo-match-backend
 
   givegetgo-user-backend:
+    container_name: givegetgo-user-backend
     build:
       context: ./servers/user
     env_file:
@@ -27,6 +29,7 @@ services:
       - givegetgo-redis
 
   givegetgo-verification-backend:
+    container_name: givegetgo-verification-backend
     build:
       context: ./servers/verification
     env_file:
@@ -39,6 +42,7 @@ services:
       - givegetgo-redis
 
   givegetgo-post-backend:
+    container_name: givegetgo-post-backend
     build:
       context: ./servers/post
     env_file:
@@ -51,6 +55,7 @@ services:
       - givegetgo-redis
 
   givegetgo-bid-backend:
+    container_name: givegetgo-bid-backend
     build:
       context: ./servers/bid
     env_file:
@@ -63,6 +68,7 @@ services:
       - givegetgo-redis
   
   givegetgo-match-backend:
+    container_name: givegetgo-match-backend
     build:
       context: ./servers/match
     env_file:

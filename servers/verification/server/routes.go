@@ -25,6 +25,7 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 
 	// Public routes - with auth middleware
 	verificationAuthGroup := r.Group("/v1/verification")
+	verificationAuthGroup.Use(middleware.AuthMiddleware())
 	// TODO: Add auth middleware
 	{
 		verificationAuthGroup.POST("/verify-email", controller.VerifyEmailVerificationHandler(verificationUtils))

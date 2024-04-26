@@ -1,13 +1,15 @@
 package main
 
 import (
+	"user/config"
 	"user/server"
 
-	"github.com/GiveGetGo/shared/config"
+	sharedConfig "github.com/GiveGetGo/shared/config"
 )
 
 func main() {
-	config.LoadEnv(".env.user") // Load environment variables
+	sharedConfig.LoadEnv(".env.user") // Load environment variables
 
+	config.Init()        // Initialize Config
 	server.StartServer() // Start the server
 }
