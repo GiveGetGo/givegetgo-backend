@@ -25,6 +25,7 @@ type IMatchUtils interface {
 	DeleteMatch(matchID uint) error
 	GetHelperUserID(c *gin.Context, bidId uint) (uint, error)
 	GetUserInfo(c *gin.Context) (types.UserInfoResponse, error)
+	CreateNotification(userID uint, notificationType types.NotificationType) error
 }
 
 type MatchUtils struct {
@@ -222,6 +223,44 @@ func (mu *MatchUtils) UpdatePostStatus(postID uint, status schema.PostStatus) er
 	// Check the response status
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("post service responded with status: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (mu *MatchUtils) CreateNotification(userID uint, notificationType types.NotificationType) error {
+	// Marshal the request body
+	notificationReqBody, err := json.Marshal(types.CreateNotificationRequest{
+		UserID:           userID,
+		NotificationType: notificationType,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Create the HTTP client and request
+	client := &http.Client{}
+	notificationServiceURL := os.Getenv("NOTIFICATION_SERVICE_URL") + "/v1/internal/notification"
+	req, err := http.NewRequest("POST", notificationServiceURL, bytes.NewBuffer(notificationReqBody))
+	if err != nil {
+		return err
+	}
+
+	// Set the headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Service", "MATCH")
+	req.Header.Set("X-Api-Key", os.Getenv("MATCH_API_KEY"))
+
+	// Send the request
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Check the response status
+	if resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("notification service responded with status: %d", resp.StatusCode)
 	}
 
 	return nil

@@ -68,3 +68,8 @@ jobs:
       run: |
         cd bid
         go build -v ./...
+
+    - name: Build the notification server
+      run: |
+        cd notification
+        go build -v ./...

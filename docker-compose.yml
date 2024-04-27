@@ -79,6 +79,19 @@ services:
     depends_on:
       - match-postgres
       - givegetgo-redis
+    
+  givegetgo-notification-backend:
+    container_name: givegetgo-notification-backend
+    build:
+      context: ./servers/notification
+    env_file:
+      - ./servers/notification/.env.notification
+    restart: unless-stopped
+    networks:
+      - givegetgo-network
+    depends_on:
+      - notification-postgres
+      - givegetgo-redis
 
   user-postgres:
     image: postgres
@@ -130,6 +143,16 @@ services:
     volumes:
       - match-postgres:/var/lib/postgresql/data
 
+  notification-postgres:
+    image: postgres
+    container_name: givegetgo-eks-notification-postgres-db
+    networks:
+      - givegetgo-network
+    env_file:
+      - ./servers/notification/.env.notification
+    volumes:
+      - notification-postgres:/var/lib/postgresql/data
+
   givegetgo-redis:
     image: redis
     container_name: givegetgo-redis
@@ -149,6 +172,7 @@ volumes:
   post-postgres:
   bid-postgres:
   match-postgres:
+  notification-postgres:
   redis-data:
 
 networks:

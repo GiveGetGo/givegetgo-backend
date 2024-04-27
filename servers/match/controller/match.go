@@ -43,9 +43,21 @@ func MatchHandler(matchUtils utils.IMatchUtils) gin.HandlerFunc {
 		err = matchUtils.UpdatePostStatus(req.PostID, schema.Matched)
 		if err != nil {
 			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			return
 		}
 
-		// TODO: Notification Setup
+		// Notify both post user and bid user
+		err = matchUtils.CreateNotification(user.UserID, types.NewMatch)
+		if err != nil {
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			return
+		}
+
+		err = matchUtils.CreateNotification(helperUserid, types.BidMatch)
+		if err != nil {
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			return
+		}
 
 		res.ResponseSuccess(c, http.StatusOK, "new-match", types.MatchSuccess())
 	}

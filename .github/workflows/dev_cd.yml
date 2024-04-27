@@ -49,6 +49,7 @@ jobs:
       post-changed: ${{ steps.check-changes.outputs.post-changed }}
       bid-changed: ${{ steps.check-changes.outputs.bid-changed }}
       match-changed: ${{ steps.check-changes.outputs.match-changed }}
+      notification-changed: ${{ steps.check-changes.outputs.notification-changed }}
       redis-changed: ${{ steps.check-changes.outputs.redis-changed }}
     steps:
       - name: Checkout
@@ -69,6 +70,7 @@ jobs:
           post_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/post || echo 'true')
           bid_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/bid || echo 'true')
           match_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/match || echo 'true')
+          notification_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/notification || echo 'true')
           redis_changed=$(git diff --quiet $prev_commit HEAD -- ./redis || echo 'true')
           
           # Output the results as step outputs
@@ -78,6 +80,7 @@ jobs:
           echo "post-changed=$post_changed" >> $GITHUB_OUTPUT
           echo "bid-changed=$bid_changed" >> $GITHUB_OUTPUT
           echo "match-changed=$match_changed" >> $GITHUB_OUTPUT
+          echo "notification-changed=$notification_change" >> $GITHUB_OUTPUT
           echo "redis-changed=$redis_changed" >> $GITHUB_OUTPUT
 
   # Build and push Docker images to ECR
@@ -93,6 +96,7 @@ jobs:
         needs.check-code-changes.outputs.post-changed == 'true' ||
         needs.check-code-changes.outputs.bid-changed == 'true' ||
         needs.check-code-changes.outputs.match-changed == 'true' ||
+        needs.check-code-changes.outputs.notification-changed == 'true' ||
         needs.check-code-changes.outputs.redis-changed == 'true' ||
         needs.check-secrets-changes.outputs.secrets-changed == 'true'
       )
@@ -107,6 +111,7 @@ jobs:
       POST_CHANGED: ${{ needs.check-code-changes.outputs.post-changed }}
       BID_CHANGED: ${{ needs.check-code-changes.outputs.bid-changed }}
       MATCH_CHANGED: ${{ needs.check-code-changes.outputs.match-changed }}
+      NOTIFICATION_CHANGED: ${{ needs.check-code-changes.outputs.notification-changed }}
       SECRET_CHANGED: ${{ needs.check-secrets-changes.outputs.secrets-changed }}
     outputs:
       image-tag: ${{ steps.generate-image-tag.outputs.image_tag }}
@@ -140,7 +145,7 @@ jobs:
         run: |
           echo "${{ secrets.REDIS_ENV }}" | base64 -d > "./redis/.env.redis"
 
-          services=("user" "verification" "post" "bid" "match")
+          services=("user" "verification" "post" "bid" "match" "notification")
           for service in "${services[@]}"; do
             service_env_var_name="${service^^}_SERVICE_ENV"
             service_secret="${!service_env_var_name}"
@@ -154,11 +159,12 @@ jobs:
           POST_SERVICE_ENV: ${{ secrets.POST_SERVICE_ENV }}
           BID_SERVICE_ENV: ${{ secrets.BID_SERVICE_ENV }}
           MATCH_SERVICE_ENV: ${{ secrets.MATCH_SERVICE_ENV }}
+          NOTIFICATION_SERVICE_ENV: ${{ secrets.NOTIFICATION_SERVICE_ENV }}
             
       # Build and push Docker images
       - name: Build and push Docker images
         run: |
-          declare -a services=("nginx" "user" "verification" "post" "bid" "match" "redis")
+          declare -a services=("nginx" "user" "verification" "post" "bid" "match" "notification" "redis")
 
           for service in "${services[@]}"; do
             SERVICE_UPPER=$(echo "$service" | tr '[:lower:]' '[:upper:]')
@@ -212,8 +218,9 @@ jobs:
           POST_POSTGRES_ENV: ${{ secrets.POST_POSTGRES_ENV }}
           BID_POSTGRES_ENV: ${{ secrets.BID_POSTGRES_ENV }}
           MATCH_POSTGRES_ENV: ${{ secrets.MATCH_POSTGRES_ENV }}
+          NOTIFICATION_POSTGRES_ENV: ${{ secrets.NOTIFICATION_POSTGRES_ENV }}
         run: |
-          services=("user" "verification" "post" "bid" "match")
+          services=("user" "verification" "post" "bid" "match" "notification")
           namespace="givegetgo-development"
           
           for service in "${services[@]}"; do
@@ -266,6 +273,7 @@ jobs:
         needs.check-code-changes.outputs.post-changed == 'true' ||
         needs.check-code-changes.outputs.bid-changed == 'true' ||
         needs.check-code-changes.outputs.match-changed == 'true' ||
+        needs.check-code-changes.outputs.notification-changed == 'true' ||
         needs.check-code-changes.outputs.redis-changed == 'true' ||
         needs.check-secrets-changes.outputs.secrets-changed == 'true'
       )
@@ -301,6 +309,7 @@ jobs:
           POST_CHANGED: ${{ needs.check-code-changes.outputs.post-changed }}
           BID_CHANGED: ${{ needs.check-code-changes.outputs.bid-changed }}
           MATCH_CHANGED: ${{ needs.check-code-changes.outputs.match-changed }}
+          NOTIFICATION_CHANGED: ${{ needs.check-code-changes.outputs.notification-changed }}
           SECRET_CHANGED: ${{ needs.check-secrets-changes.outputs.secrets-changed }}
         run: |
           # Update Nginx application
@@ -318,7 +327,7 @@ jobs:
           fi
       
           # Update backend applications
-          for service in user verification post bid match; do
+          for service in user verification post bid match notification; do
             SERVICE_CHANGED="${service^^}_CHANGED"  # Convert service name to uppercase and append '_CHANGED'
             if [ "${!SERVICE_CHANGED}" == "true" ] || [ "$SECRET_CHANGED" = "true" ]; then
               APP_NAME="givegetgo-$service-backend"
@@ -333,7 +342,7 @@ jobs:
           done
       
           # Update PostgreSQL applications
-          for service in user-postgres post-postgres verification-postgres bid-postgres match-postgres; do
+          for service in user-postgres post-postgres verification-postgres bid-postgres match-postgres notification-postgres; do
             APP_NAME="givegetgo-$service"
             argocd app set $APP_NAME \
               --helm-set image.repository="$POSTGRES_IMAGE_REPO" \
