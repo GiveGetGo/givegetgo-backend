@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Avatar, Button, Text, Card, Title, Paragraph, Appbar } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -15,9 +15,40 @@ type RootStackParamList = {
 
 type NotificationsProps = NativeStackScreenProps<RootStackParamList, 'NotificationScreen'>;
 
+type PostOwnerProfile = { 
+  post_id: string;
+  name: string;
+  title: string;
+  description: string;
+  avatar: string;
+}
+
+const defaultPostOwnerProfile: PostOwnerProfile = {
+  post_id: '1',
+  name: 'Rita Cheng',
+  title: 'C Programming Guide',
+  description: 'This is a papercopy of "C Programming Guide" that has only been used for 3 months.',
+  avatar: '../assets/avatars/avatar1.png'
+};
+
 const SeeRequestScreen: React.FC<NotificationsProps> = ({ navigation }: NotificationsProps) => {
 
   const [fontsLoaded] = useFonts({ Montserrat_700Bold_Italic });
+
+  const [postOwnerProfile, setPostOwnerProfile] = useState<PostOwnerProfile>(defaultPostOwnerProfile);
+
+  useEffect(() => {                                                                                     //fill this in to get db info 
+    const fetchPostOwnerProfile = async () => {
+      try {
+        const response = await fetch('URL_TO_YOUR_BACKEND/postOwnerProfile_endpoint');
+        const json = await response.json();
+        setPostOwnerProfile(json); // Adjust this depending on the structure of your JSON
+      } catch (error) {
+        // console.error(error); // uncomment this after finish frontend developing
+      }
+    };
+    fetchPostOwnerProfile();
+  }, []);
 
   const goToProfile = () => {
     navigation.navigate('NotificationStackProfileScreen');
@@ -27,7 +58,28 @@ const SeeRequestScreen: React.FC<NotificationsProps> = ({ navigation }: Notifica
     navigation.navigate('RequestSucceedScreen');
   };
 
-  const use_navigation = useNavigation(); //for Appbar.BackAction
+  const use_navigation = useNavigation(); //for Appbar.BackAction   
+  
+  
+  // require() could not directly take the url
+  interface ImageMap {
+    [key: string]: NodeRequire;
+  }
+  const imageMap: { [key: string]: NodeRequire } = {
+      '../assets/avatars/avatar1.png': require('../assets/avatars/avatar1.png'),
+      '../assets/avatars/avatar2.png': require('../assets/avatars/avatar2.png'),
+      '../assets/avatars/avatar3.png': require('../assets/avatars/avatar3.png'),
+      '../assets/avatars/avatar4.png': require('../assets/avatars/avatar4.png'),
+      '../assets/avatars/avatar5.png': require('../assets/avatars/avatar5.png'),
+      '../assets/avatars/avatar6.png': require('../assets/avatars/avatar6.png'),
+      '../assets/avatars/avatar7.png': require('../assets/avatars/avatar7.png'),
+      '../assets/avatars/avatar8.png': require('../assets/avatars/avatar8.png'),
+      '../assets/avatars/avatar9.png': require('../assets/avatars/avatar9.png'),
+  };
+  const getProfilePictureSource = (uri: string) => {
+      return imageMap[uri] || require(`./profile_icon.jpg`);
+  };
+
 
   return (
     <SafeAreaView  style={styles.container}> 
@@ -40,12 +92,12 @@ const SeeRequestScreen: React.FC<NotificationsProps> = ({ navigation }: Notifica
             <Card.Content>
               <View style={styles.avatarContainer}>
                 <TouchableOpacity onPress={goToProfile}>
-                    <Avatar.Image size={70} source={require('./profile_icon.jpg')} />
+                    <Avatar.Image size={70} source={getProfilePictureSource(postOwnerProfile.avatar)} />
                 </TouchableOpacity>
               </View>
-              <Title style={styles.title}>Jimmy Ho</Title>
-              <Title style={styles.boldText}>XXXXXX</Title>
-              <Paragraph style={styles.paragraph}>XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</Paragraph>
+              <Title style={styles.title}>{postOwnerProfile.name}</Title>
+              <Title style={styles.boldText}>{postOwnerProfile.title}</Title>
+              <Paragraph style={styles.paragraph}>{postOwnerProfile.description}</Paragraph>
             </Card.Content>
             <Card.Actions style={styles.cardActions}>
               <Button style={styles.button} mode="contained" onPress={takeAction}>

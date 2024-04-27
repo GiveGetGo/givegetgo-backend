@@ -4,6 +4,7 @@ import { Button, Text, Card, Paragraph } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFonts, Montserrat_700Bold_Italic } from '@expo-google-fonts/montserrat';
 
 type RootStackParamList = {
   RatingSucceedScreen: undefined;
@@ -19,6 +20,9 @@ type ScreenNavigationProp = StackNavigationProp<
 type NotificationsProps = NativeStackScreenProps<RootStackParamList, 'NotificationScreen'>;
 
 const RatingSucceedScreen: React.FC<NotificationsProps> = ({ navigation }: NotificationsProps) => {
+
+  const [fontsLoaded] = useFonts({ Montserrat_700Bold_Italic });
+
   const use_navigation = useNavigation<ScreenNavigationProp>();
 
   const GoToHome = () => {
@@ -28,7 +32,9 @@ const RatingSucceedScreen: React.FC<NotificationsProps> = ({ navigation }: Notif
   return (
     <SafeAreaView  style={styles.container}> 
       <View style={styles.headerContainer}>
+        <View style={styles.backActionPlaceholder} />
         <Text style={styles.header}>GiveGetGo</Text>
+        <View style={styles.backActionPlaceholder} />
       </View>
       <Card style={styles.card}>
         <Card.Content>
@@ -48,27 +54,41 @@ const RatingSucceedScreen: React.FC<NotificationsProps> = ({ navigation }: Notif
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 1,                                
     marginTop: 50,
-    alignItems: 'center',
-  },
-  header: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    padding: 16,
-    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerContainer: {
     flexDirection: 'row', // Aligns items in a row
     alignItems: 'center', // Centers items vertically
-    paddingLeft: 10, // Adds padding to the left of the avatar
-    paddingRight: 10, // Adds padding to the right side
+    justifyContent: 'space-between', // Distributes items evenly horizontally
+    paddingLeft: 10, 
+    paddingRight: 10, 
+    position: 'absolute', // So that while setting card to the vertical middle, it still stays at the same place
+    top: 0, 
+    left: 0,
+    right: 2,
+    zIndex: 1, // Ensure the headerContainer is above the card
   },
-  card: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+  header: {
+    fontSize: 22, // Increase the font size
+    fontWeight: '600', // Make the font weight bold
+    fontFamily: 'Montserrat_700Bold_Italic',
+    textAlign: 'center', // Center the text
+    color: '#444444', // Dark gray color
+  },
+  backActionPlaceholder: {
+    width: 48, // This should match the width of the Appbar.BackAction for balance
+    height: 52,
+  },
+  card: { //page gets longer when there are more contexts
+    borderRadius: 15, // Add rounded corners to the card
+    marginVertical: 6,
+    marginHorizontal: 20,
+    elevation: 0, // Adjust for desired shadow depth
+    // backgroundColor: '#ffffff', 
+    padding: 15, // Add padding inside the card
+    height: 130,
   },
   paragraph: {
     textAlign: 'center',
@@ -78,8 +98,8 @@ const styles = StyleSheet.create({
   },
   button: {
     position: 'absolute', 
-    left: 120,
-    right: 120, //position, left, right together controls the button's length and horizontal location
+    left: 110,
+    right: 110, //position, left, right together controls the button's length and horizontal location
     alignSelf: 'center', 
   },
   cardActions: {

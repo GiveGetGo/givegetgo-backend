@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, SafeAreaView, FlatList, View} from 'react-native';
 import { Text, Avatar, Divider, Card, Title, Paragraph, Appbar} from 'react-native-paper';
 import { Rating } from 'react-native-ratings';
@@ -31,7 +31,7 @@ type History = {
   rating?: number; // Optional rating, only for "Match" items
 };
 
-const currentUserInfo: UserInfo = { //should be loaded from the database    
+const defaultUserInfo: UserInfo = {   
   name: 'Gilbert Hsu',
   email: 'xxx@gmail.com',
   bio: 'I am Gilbert the magician.',
@@ -40,7 +40,7 @@ const currentUserInfo: UserInfo = { //should be loaded from the database
   classYear: 2024,
 };
 
-const history_data: History[] = [ //should be loaded from the database //[] because there are more than one data
+const defaultHistoryData: History[] = [ 
   {
     id: '1',                             
     title: 'Match',
@@ -71,6 +71,34 @@ const history_data: History[] = [ //should be loaded from the database //[] beca
 const ProfileScreen: React.FC = () => {   
 
   const [fontsLoaded] = useFonts({ Montserrat_700Bold_Italic });
+
+  const [currentUserInfo, setCurrentUserInfo] = useState<UserInfo>(defaultUserInfo);
+  useEffect(() => {                                                                    //fill this in to get db info
+    const fetchCurrentUserInfo = async () => {
+      try {
+        const response = await fetch('URL_TO_YOUR_BACKEND/user_info_endpoint');
+        const json = await response.json();
+        setCurrentUserInfo(json); // Adjust this depending on the structure of your JSON
+      } catch (error) {
+        // console.error(error); // uncomment this after finish frontend developing
+      }
+    };
+    fetchCurrentUserInfo();
+  }, []);
+
+  const [historyData, setHistoryData] = useState<History[]>(defaultHistoryData);
+  useEffect(() => {                                                                     //fill this in to get db info
+    const fetchHistoryData = async () => {
+      try {
+        const response = await fetch('URL_TO_YOUR_BACKEND/history_data_endpoint');
+        const json = await response.json();
+        setHistoryData(json); // Adjust this depending on the structure of your JSON
+      } catch (error) {
+        // console.error(error); // uncomment this after finish frontend developing
+      }
+    };
+    fetchHistoryData();
+  }, []);
   
   const use_navigation = useNavigation(); //for Appbar.BackAction
 
@@ -97,7 +125,6 @@ const ProfileScreen: React.FC = () => {
   const getProfilePictureSource = (uri: string) => {
       return imageMap[uri] || require(`./profile_icon.jpg`);
   };
-
 
   const renderItem = ({ item }: { item: History })  => (
     <Card style={styles.history_card}>
@@ -138,7 +165,7 @@ const ProfileScreen: React.FC = () => {
       <Text style={styles.details_bio}>{currentUserInfo.bio}</Text>
       <Divider style={styles.divider} />
       <FlatList
-          data={history_data}
+          data={historyData}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           // removeClippedSubviews={true} // If you want to improve performance on large lists, uncomment the line

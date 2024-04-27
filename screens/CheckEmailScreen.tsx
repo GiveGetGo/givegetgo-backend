@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TextInput, Image, TouchableOpacity } from 'react-native';
-import { Button } from 'react-native-paper';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, SafeAreaView } from 'react-native';
+import { Appbar } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useFonts, Montserrat_700Bold_Italic } from '@expo-google-fonts/montserrat';
 
 type RootStackParamList = {
-  // ... other screen names
   CheckEmailScreen: undefined;
   ConfirmationScreen: undefined;
 };
@@ -16,9 +17,14 @@ type ScreenNavigationProp = StackNavigationProp<
 >;
 
 const CheckEmailScreen: React.FC = () => {
+
+  const [fontsLoaded] = useFonts({ Montserrat_700Bold_Italic });
+
+  const use_navigation = useNavigation(); //for Appbar.BackAction
+
   const navigation = useNavigation<ScreenNavigationProp>();
   const [code, setCode] = useState('');
-  const [email, setEmail] = useState<string>('');
+  const [email, setEmail] = useState<string>('xxx@gmail.com');
 
   const handleCodeComplete = (code: string) => {
     // This function is triggered when all seven digits are entered
@@ -36,89 +42,136 @@ const CheckEmailScreen: React.FC = () => {
   };
 
   const handleConfirm = () => {
+    // add api here; if success fo to ConfirmationScreen; else clean up the digits and stay in the current page
     navigation.navigate('ConfirmationScreen');
+  };
+
+  const handleResendCode = () => {
+    // add api here
   };
 
   useEffect(() => {
     // Fetch the email from the backend
-    const fetchEmail = async () => {
+    const fetchEmail = async () => {                        
       try {
         const response = await fetch('URL_TO_YOUR_BACKEND/json_endpoint');
         const json = await response.json();
         setEmail(json.email); // Adjust this depending on the structure of your JSON
       } catch (error) {
-        console.error(error);
+        // console.error(error);
       }
     };
 
     fetchEmail();
   }, []);
 
-  return (
-    <View style={styles.container}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Text>←</Text> 
-      </TouchableOpacity>
-      <Text style={styles.header}>GiveGetGo</Text>
-      <Image
-        source={require('./email_icon.png')} // Replace with your email icon path
-        style={styles.emailIcon}
-      />
-      <Text style={styles.title}>Check Your Email</Text>
-      <Text style={styles.subtitle}>
-        We have sent an email to {email} to confirm the validity of this email address.
-        After receiving the email, please enter the 7-digit code in the provided box.
-      </Text>
-      <View style={styles.container}>
-        <TextInput
-            style={styles.codeInput}
-            placeholder="_ _ _ _ _ _ _"
-            value={code}
-            onChangeText={handleCodeChange}
-            keyboardType="number-pad"
-            maxLength={7}
-            returnKeyType="done"
-        />
-      </View>
-      <Button
-        mode="outlined"
-        onPress={() => {
-          // Handle resend code logic
-        }}
-      >
-        Resend Code
-      </Button>
+return (
+  <SafeAreaView style={styles.container}>
+    <View style={styles.headerContainer}>
+        <Appbar.BackAction style={styles.backAction} onPress={() => use_navigation.goBack()} />
+        <Text style={styles.header}>GiveGetGo</Text>
+        <View style={styles.backActionPlaceholder} />
     </View>
+    <MaterialCommunityIcons name="email-outline" size={100} color="#000" />
+    <Text style={styles.title}>Check Your Email</Text>
+    <Text style={styles.subtitle1}>
+      We have sent an email to {email} to confirm the validity of this email address.
+    </Text>
+    <Text style={styles.subtitle2}>
+      Please enter the 7-digit code below.
+    </Text>
+    <TextInput
+      style={styles.codeInput}
+      placeholder="_ _ _ _ _ _ _"
+      value={code}
+      onChangeText={handleCodeChange}
+      keyboardType="number-pad"
+      maxLength={7}
+      returnKeyType="done"
+    />
+    <TouchableOpacity style={styles.button} onPress={handleResendCode}>
+      <Text style={styles.buttonText}>Resend Code</Text>
+    </TouchableOpacity>
+  </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 1,                                
+    marginTop: 50,
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
   },
-  backButton: {
-    alignSelf: 'flex-start',
-    marginBottom: 20,
+  headerContainer: {
+    flexDirection: 'row', // Aligns items in a row
+    alignItems: 'center', // Centers items vertically
+    justifyContent: 'space-between', // Distributes items evenly horizontally
+    paddingLeft: 10, 
+    paddingRight: 10, 
+    position: 'absolute', // So that while setting card to the vertical middle, it still stays at the same place
+    top: 0, 
+    left: 0,
+    right: 0,
+    zIndex: 1, // Ensure the headerContainer is above the card
   },
   header: {
-    // Style for your header
+    fontSize: 22, // Increase the font size
+    fontWeight: '600', // Make the font weight bold
+    fontFamily: 'Montserrat_700Bold_Italic',
+    textAlign: 'center', // Center the text
+    color: '#444444', // Dark gray color
+  },
+  backActionPlaceholder: {
+    width: 48, // This should match the width of the Appbar.BackAction for balance
+    height: 48,
+  },
+  backAction: {
+    marginLeft: 0 //This means the relative margin, comparing to the container (?)
   },
   emailIcon: {
-    width: 100,
-    height: 100,
-    // Adjust the size as needed
+    marginBottom: 24,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginVertical: 16,
+    marginVertical: 8,
   },
-  subtitle: {
+  subtitle1: {
+    fontSize: 16,
+    color: 'grey',
     textAlign: 'center',
-    marginBottom: 40,
+    // marginBottom: 24,
+    padding: 20,
+  },
+  subtitle2: {
+    fontSize: 16,
+    color: 'grey',
+    textAlign: 'center',
+    marginTop: -40,
+    marginBottom: 24,
+    padding: 20,
+  },
+  codeInput: {
+    width: '100%',
+    padding: 10,
+    fontSize: 18,
+    borderBottomColor: 'grey',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  button: {
+    width: '80%',
+    padding: 12,
+    borderRadius: 5,
+    backgroundColor: 'black',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  buttonText: {
+    fontSize: 18,
+    color: 'white',
+    fontWeight: '500',
   },
 });
 

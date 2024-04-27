@@ -1,90 +1,78 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Image, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text, SafeAreaView } from 'react-native';
 import { Button } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-// Define the types for your navigation stack
 type RootStackParamList = {
   ConfirmationScreen: undefined;
   LoginScreen: undefined;
 };
 
-// Define the type for the navigation prop
 type LoginScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
   'ConfirmationScreen' | 'LoginScreen'
 >;
 
 const ConfirmationScreen: React.FC = () => {
-  const checkIcon = require('./confirm_icon.jpg'); 
   const navigation = useNavigation<LoginScreenNavigationProp>();
-  const [email, setEmail] = useState<string>('');
-
-  const handleGoHome = () => {
-    // Navigation logic to go back to the home screen
-    navigation.navigate('LoginScreen');
-  };
+  const [email, setEmail] = useState<string>('email@example.com'); // Placeholder for actual email state
 
   useEffect(() => {
     // Fetch the email from the backend
-    const fetchEmail = async () => {
-      try {
-        const response = await fetch('URL_TO_YOUR_BACKEND/json_endpoint');
-        const json = await response.json();
-        setEmail(json.email); // Adjust this depending on the structure of your JSON
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    fetchEmail();
+    // ...
   }, []);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>GiveGetGo</Text>
-      <Image source={checkIcon} style={styles.icon} />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.headerContainer}>
+          <Text style={styles.header}>GiveGetGo</Text>
+      </View>
+      <MaterialCommunityIcons name="check-circle" size={100} color="black" />
       <Text style={styles.confirmedText}>Confirmed</Text>
-      <Text style={styles.emailText}>{email} has been confirmed</Text> 
-      <Button mode="contained" onPress={handleGoHome} style={styles.button}>
+      <Text style={styles.emailText}>{email} has been confirmed</Text>
+      <Button mode="contained" onPress={() => navigation.navigate('LoginScreen')} style={styles.button}>
         Home
       </Button>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#fff', // adjust the background color as per your theme
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1,
+    alignItems: 'center',
+    paddingTop: 50, // Adjust for your header's height
   },
   header: {
-    position: 'absolute',
-    top: 20, // adjust the positioning as needed
-    left: 20, // adjust the positioning as needed
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  icon: {
-    width: 100, // Set the width as per your UI design
-    height: 100, // Set the height as per your UI design
-    marginBottom: 24, // adjust the spacing as per your UI design
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#444444',
   },
   confirmedText: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginVertical: 16,
   },
   emailText: {
     fontSize: 16,
     marginBottom: 48,
+    textAlign: 'center',
   },
   button: {
-    // Style your button with react-native-paper theming or custom styles
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
 });
 

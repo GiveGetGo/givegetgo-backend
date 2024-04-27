@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, SafeAreaView } from 'react-native';
 import { Button, Text, Card, Paragraph } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -19,9 +19,36 @@ type ScreenNavigationProp = StackNavigationProp<
 
 type NotificationsProps = NativeStackScreenProps<RootStackParamList, 'NotificationScreen'>;
 
+type PostOwnerProfile = { 
+  post_id: string;
+  name: string;
+  contact: string;
+}
+
+const defaultPostOwnerProfile: PostOwnerProfile = {
+  post_id: '1',
+  name: 'Rita Cheng',
+  contact: '+17651234567',
+};
+
 const GiveOutContactScreen: React.FC<NotificationsProps> = ({ navigation }: NotificationsProps) => {
 
   const [fontsLoaded] = useFonts({ Montserrat_700Bold_Italic });
+
+  const [postOwnerProfile, setPostOwnerProfile] = useState<PostOwnerProfile>(defaultPostOwnerProfile);
+
+  useEffect(() => {                                                                                     //fill this in to get db info 
+    const fetchPostOwnerProfile = async () => {
+      try {
+        const response = await fetch('URL_TO_YOUR_BACKEND/postOwnerProfile_endpoint');
+        const json = await response.json();
+        setPostOwnerProfile(json); // Adjust this depending on the structure of your JSON
+      } catch (error) {
+        // console.error(error); // uncomment this after finish frontend developing
+      }
+    };
+    fetchPostOwnerProfile();
+  }, []);
 
   const use_navigation = useNavigation<ScreenNavigationProp>();
 
@@ -40,10 +67,10 @@ const GiveOutContactScreen: React.FC<NotificationsProps> = ({ navigation }: Noti
       <Card style={styles.card}>
         <Card.Content>
           <Paragraph style={styles.paragraph}>
-            Jimmy Ho’s Contact number is:
+            {postOwnerProfile.name}’s contact number is:
           </Paragraph>
           <Paragraph style={styles.paragraph_userinfo}>
-            +17650000000
+            {postOwnerProfile.contact}
           </Paragraph>
         </Card.Content>
         <Card.Actions style={styles.cardActions}>

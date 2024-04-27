@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView } from 'react-native';
 import { Button, Text, Card, Title, Paragraph } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -8,6 +8,16 @@ type RootStackParamList = {
   RequestSucceedScreen: undefined;
   GiveOutContactScreen: undefined;
   NotificationScreen: undefined;
+};
+
+type PostOwnerProfile = { 
+  post_id: string;
+  name: string;
+}
+
+const defaultPostOwnerProfile: PostOwnerProfile = {
+  post_id: '1',
+  name: 'Rita Cheng',
 };
 
 type NotificationsProps = NativeStackScreenProps<RootStackParamList, 'NotificationScreen'>;
@@ -20,6 +30,22 @@ const RequestSucceedScreen: React.FC<NotificationsProps> = ({ navigation }: Noti
     navigation.navigate('GiveOutContactScreen');
   };
 
+  const [userName, setUserName] = useState<string>(defaultPostOwnerProfile.name);
+
+  useEffect(() => {  //fill this in to get db info
+    const fetchUserName = async () => {
+      try {
+        const response = await fetch('URL_TO_YOUR_BACKEND/json_endpoint');
+        const json = await response.json();
+        setUserName(json.email); // Adjust this depending on the structure of your JSON
+      } catch (error) {
+        // console.error(error); // uncomment this after finish frontend developing
+      }
+    };
+
+    fetchUserName();
+  }, []);
+
   return (
     <SafeAreaView  style={styles.container}> 
       <View style={styles.headerContainer}>
@@ -31,7 +57,7 @@ const RequestSucceedScreen: React.FC<NotificationsProps> = ({ navigation }: Noti
         <Card.Content>
           <Title style={styles.title}>Congratulations!</Title>
           <Paragraph style={styles.paragraph}>
-            The match has been made. You are now able to contact <Paragraph style={styles.boldText}>Jimmy Ho</Paragraph>.
+            The match has been made. You are now able to contact <Paragraph style={styles.boldText}>{userName}</Paragraph>.
           </Paragraph>
         </Card.Content>
         <Card.Actions style={styles.cardActions}>

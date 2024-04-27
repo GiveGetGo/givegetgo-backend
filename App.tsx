@@ -19,6 +19,7 @@ export type RootStackParamList = {
   ConfirmationScreen: undefined;
   MainScreen: undefined;
   GiveOutContactScreen: undefined;
+  SettingsScreen: undefined;
 };
 
 const MainStack = createStackNavigator<RootStackParamList>();
@@ -28,7 +29,7 @@ const App: React.FC = () => {
     <Provider store={store}> 
       <NavigationContainer>
         <MainStack.Navigator initialRouteName="LoginScreen">
-          <MainStack.Screen name="LoginScreen" component={LoginScreen} options={{ headerShown: false }} />
+          <MainStack.Screen name="LoginScreen" component={LoginScreen} options={{ title: 'Login', headerShown: false }} />
           <MainStack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} options={{ title: 'Forgot Password', headerShown: false }} />
           <MainStack.Screen name="SignUpScreen" component={SignUpScreen} options={{ title: 'Sign Up', headerShown: false }} />
           <MainStack.Screen name="CheckEmailScreen" component={CheckEmailScreen} options={{ title: 'Check Email', headerShown: false }} />
@@ -52,28 +53,57 @@ export default App;
 // justifyContent: 'center', // Center contents vertically // alignItems: 'center', // Center contents horizontally
 // following up, those positioned "absolute" will not be counted in when using justifyContent or alignItems
 
+// Api Spec:
+// user/login (need to uncomment)
+// user/register
+// mfa/register (with problem)
+
 // Main tasks:
-// Separate MainScreen's four cards so that CSS will be easier to build
-// SeeRequestScreen, PostDetailsScreen, NotificationStackProfileScreen: load from json, not redux? (see next line)
-// substitute the selected one to './profile_icon.jpg' in all screens (just search './profile_icon.jpg' to find all) (redux) (see SettingsScreen for require() mapping)
-// screens裡的圖片改到assests裡
-// fill in xxx and some other "Jimmy Ho" for notification stack, home stack pages (see confirmationScreen) (start from the opened screens, then work on the rest while modifying css)
-// add userId to redux and screens (got from registration; required in all interactive calls)
-// Notifications: find way to hide double-headers (add { headerShown: false } like line 31)
-// nativeWind + gpt (no more, just do css)
+// connect api, starting from loginScreen //now:user,mfa,verification, post, notification
+// add notifications on email, password constraints when signing up
+// post delete edit (at PostScreen below, add "see previous post")
+// notification add read boolean (currently no api)
+// format CheckEmailScreen, ConfirmationScreen, modals in loginScreen and SettingsScreen (maybe to alert?)
+// make sure there's a default/demo data for each screen needed
+// hook expo-font (might need) ()so far imported but not really used
 
 // if have time: 
 // from profile (and some others), make each post's detailed page
 // ProfileScreen bio, reply needs word limit
 // animation among notification pages? (react-native-reanimated transition; ask claude) (or simply use modal; https://reactnative.dev/docs/modal)
 // font?
+// Separate MainScreen's four cards so that CSS will be easier to build
+// screens裡的圖片改到assests裡
+// delete nonnecessary images and files
+// hook expo-font (might need) ()so far imported but not really used
+// color: #FAFAFA + #789EC9
+// add some emojis in post and notifications (looks boring rn)
 
 // CSS status:
 // ProfileScreen: (DONE) container, headContainer, header could be replicated to other pages with backspace; card settings
 // SeeRequestScreen: (DONE) card in the MIDDLE; avatar; "Take" button
 // RequestSucceedScreen: (DONE) header with no backspace (parameters in the 4 sets would exactly match the header w bs); mind each "padding", "marginBottom", "marginTop" values
 // GiveOutContactScreen:  (DONE)
-// (above are all the notification->request's sub pages)
+// PostScreen:  (DONE)
+// SettingsScreen: (DONE)
+// Notifications: (DONE)
+// RatingScreen: (DONE)
+// RatingSucceedScreen: (DONE)
+// PostDetailsScreen: (DONE)
+// PostRequestInfoScreen: (DONE)
+// PostRequestSucceedScreen: (DONE)
+// PostSubmittedScreen: (DONE)
+// Home, Notification 一擠一鬆，改一個 (DONE)
+// Home: (DONE)
+// AvatarPickerScreen: (DONE) 
+// LoginScreen: (DONE) 
+// ForgotPasswordScreen: (DONE)  
+// SignUpScreen: (DONE) 
+// CheckEmailScreen: (format)           
+// ConfirmationScreen: (remove pic by icon; gpt then format)
+// expo on computer 
+// notification add read boolean (currently no api) //http://https://api.givegetgo.xyz/ //routes.go //see terminal or inspect/net //now:user,mfa,verification, post
+
 
 
 
@@ -86,7 +116,7 @@ export default App;
 
 
 
-// run npm, push code
+
 
 
 

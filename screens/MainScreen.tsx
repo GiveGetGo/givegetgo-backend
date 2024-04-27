@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, StyleSheet, View, FlatList, Dimensions, TouchableOpacity, TouchableWithoutFeedback, Keyboard } from 'react-native';
-import { BottomNavigation, Text, Searchbar, Card, Title, Paragraph, Avatar, IconButton, Button, List, Divider, TextInput } from 'react-native-paper';
+import { SafeAreaView, StyleSheet, View, FlatList, Dimensions, TouchableOpacity, TouchableWithoutFeedback, Keyboard, ScrollView } from 'react-native';
+import { BottomNavigation, Text, Searchbar, Card, Title, Paragraph, Avatar, IconButton, Button, List, Divider, TextInput, Modal } from 'react-native-paper';
 import { NavigationContainer, CommonActions } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -18,6 +18,9 @@ import PostDetailsScreen from './PostDetailsScreen';
 import PostRequestInfoScreen from './PostRequestInfoScreen'; 
 import PostRequestSucceedScreen from './PostRequestSucceedScreen'; 
 import AvatarPickerScreen from './AvatarPickerScreen'; 
+import PostSubmittedScreen from './PostSubmittedScreen'; 
+import { useFonts, Montserrat_700Bold_Italic } from '@expo-google-fonts/montserrat';            
+import * as Updates from 'expo-updates';
 
 type RootStackParamList = {
     MainScreen: undefined;
@@ -33,17 +36,18 @@ type RootStackParamList = {
     GiveOutContactScreen: undefined;
     RatingSucceedScreen: undefined;
     PostDetailsScreen: { postId: string };
-    PostRequestInfoScreen: undefined; 
+    PostRequestInfoScreen: { postId: string }; 
     PostRequestSucceedScreen: undefined;
     SettingsScreen: {newAvatarUri: string};
     AvatarPickerScreen: undefined;
+    PostScreen: undefined;
+    PostSubmittedScreen: undefined;
   };
 
 type Post = {
     id: string;
     title?: string; // Optional, if your posts have titles
     description?: string; // Optional, if your posts have descriptions
-    imageUri?: string;
     // Include other properties for your posts, like images, etc.
   };
 
@@ -69,19 +73,21 @@ type MainScreenProps = {
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'HomeScreen'>;
 
-type MakingPostsProps = {
-    // Define props here if any
-};
+type PostScreenProps = NativeStackScreenProps<RootStackParamList, 'PostScreen'>;
 
 type NotificationsProps = NativeStackScreenProps<RootStackParamList, 'NotificationScreen'>;
 
 type SettingsScreenProps = NativeStackScreenProps<RootStackParamList, 'SettingsScreen'>;
 
 // dummy data for posts //should be loaded from the database
-const posts: Post[] = [
-    { id: '1', title: 'Post 11111111111', description: 'Description 11111111111111111111111111'},
-    { id: '2', title: 'Post 22222222222', description: 'Description 2222'},
-    { id: '3', title: 'Post 3', description: 'Description 3'},
+const posts_data: Post[] = [
+    { id: '1', title: 'SCLA101 Homework Help', description: 'I need someone tutoring me for my essay assignment.'},
+    { id: '2', title: 'ECE Career Coaching', description: 'I am seeking a career coach to help me set and achieve goals.'},
+    { id: '3', title: 'Furniture Assembly', description: 'I need help assembling a new desk and bookshelf from IKEA.'},
+    { id: '4', title: 'Meditation Guidance', description: 'Looking for a teacher to help me establish a regular meditation practice.'},
+    { id: '5', title: 'Moving Assistance', description: 'I need help packing and moving my belongings to a new apartment across town.'},
+    { id: '6', title: 'Need a Bike for Commuting', description: 'Looking for a used bicycle in good working condition to avoid walking 30 minutes to and from school every day.'},
+    { id: '7', title: 'Taking Care of My Cat', description: 'I will be out of town on Febuary 28th and would need someone to look over my cat Lana.'},
     // ...more posts
   ];
 
@@ -91,17 +97,56 @@ const notifications_data: Notification[] = [
       id: '1',
       title: 'Request',
       time: '1 hour ago',
-      description: 'You have an matching request from xxxxxxxxxx for your xxxxxxx ',
+      description: 'New matching request from Rita Cheng for your "C Programming Guide".'
     },
     {
       id: '2',
       title: 'Match',
-      description: 'Match succeeded with xxxxx  for xxxxxxxx. Click in to rate this match!',
-      time: '2 hour ago',
+      time: '2 hours ago',
+      description: 'Match succeeded with Jimmy Ho for "Python for Data Analysis". Click in to rate this match!'
     },
-  ];
+    {
+      id: '3',
+      title: 'Request',
+      time: '3 hours ago',
+      description: 'New matching request from Carol D. for your "Advanced Calculus".'
+    },
+    {
+      id: '4',
+      title: 'Match',
+      time: '1 day ago',
+      description: 'Match succeeded with Dave E. for "UX Design Fundamentals". Click in to rate this match!'
+    },
+    {
+        id: '5',
+        title: 'Match',
+        time: '1 month ago',
+        description: 'Match succeeded with Jason F. for "Crypto Trading 101". Click in to rate this match!'
+      },
+];
 
 // dummy data for settings is written locally
+
+// Custom hook to divide posts into two columns; used in HomeScreen
+function useDividePostsIntoColumns(posts: Post[]): [Post[], Post[]] {
+    const [columnOne, setColumnOne] = useState<Post[]>([]);
+    const [columnTwo, setColumnTwo] = useState<Post[]>([]);
+
+    useEffect(() => {
+        const col1: Post[] = [];
+        const col2: Post[] = [];
+
+        posts.forEach((item, index) => {
+            if (index % 2 === 0) col1.push(item);
+            else col2.push(item);
+        });
+
+        setColumnOne(col1);
+        setColumnTwo(col2);
+    }, [posts]); // Dependency array includes posts to recalculate when posts change
+
+    return [columnOne, columnTwo];
+}
 
 const Tab = createBottomTabNavigator();
 
@@ -117,7 +162,18 @@ function HomeStackScreen() {
       <HomeStack.Screen name="PostRequestSucceedScreen" component={PostRequestSucceedScreen} options={{ headerShown: false }}/>
     </HomeStack.Navigator>
   );
-}
+}                    
+
+// Build Post's Stack
+const PostStack = createNativeStackNavigator();
+function PostStackScreen() {
+  return (
+    <PostStack.Navigator>
+      <PostStack.Screen name="PostScreen" component={PostScreen} options={{ headerShown: false }}/>
+      <PostStack.Screen name="PostSubmittedScreen" component={PostSubmittedScreen} options={{ headerShown: false }}/>
+    </PostStack.Navigator>
+  );
+}             
 
 // Build Notification's Stack
 const NotificationsStack = createNativeStackNavigator();
@@ -133,7 +189,7 @@ function NotificationsStackScreen() {
       <NotificationsStack.Screen name="RatingSucceedScreen" component={RatingSucceedScreen} options={{ headerShown: false }}/>
     </NotificationsStack.Navigator>
   );
-}
+}                     
 
 // Build Settings's Stack
 const SettingsStack = createNativeStackNavigator();
@@ -207,7 +263,7 @@ const MainScreen: React.FC<MainScreenProps> = () => {
                 />
                 <Tab.Screen
                 name="Post"
-                component={PostScreen}
+                component={PostStackScreen}
                 options={{
                     tabBarLabel: 'Post',
                     tabBarIcon: ({ color, size }) => {
@@ -243,8 +299,22 @@ const MainScreen: React.FC<MainScreenProps> = () => {
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }: HomeScreenProps) => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const onChangeSearch = (query: string) => setSearchQuery(query);
-    const searchResults = ['Post 1', 'Post 3', 'Post 5']; // Example static data
     // const navigation = useNavigation<ScreenNavigationProp>();
+
+    const [posts, setPosts] = React.useState<Post[]>(posts_data); 
+
+    useEffect(() => {                                                                     //fill this in to get db info
+        const fetchPostsData = async () => {
+          try {
+            const response = await fetch('URL_TO_YOUR_BACKEND/posts_data_endpoint');
+            const json = await response.json();
+            setPosts(json); // Adjust this depending on the structure of your JSON
+          } catch (error) {
+            // console.error(error); // uncomment this after finish frontend developing
+          }
+        };
+        fetchPostsData();
+      }, []);
 
     const handleProfilePress = () => {
         navigation.navigate('ProfileScreen'); 
@@ -258,15 +328,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }: HomeScreenProps) 
         navigation.navigate('PostDetailsScreen', {postId: postId,});
     };
 
-    const numColumns = 2;
-    const { width } = Dimensions.get('window');
-    const cardWidth = width / numColumns - 16;                     
-    const renderItem = ({ item }: { item: Post }) => (
-        <Card style={[styles.card, { width: cardWidth }]} onPress={() => navigateToPostDetails(item.id)} >
-            {/* {item.imageUri && <Card.Cover source={{ uri: item.imageUri }} />}   */}
+    // Substituting "flatlist" to allow cards in the same row not aligning each other
+    const [columnOne, columnTwo] = useDividePostsIntoColumns(posts);
+
+    const renderCard = (item: Post) => ( 
+        <Card mode="elevated" style={[styles.home_card]} onPress={() => navigateToPostDetails(item.id)} >
             <Card.Content>
-            <Title>{item.title}</Title>
-            <Paragraph>{item.description}</Paragraph>
+            <Title style={styles.homecard_title}>{item.title}</Title>
+            <Paragraph style={styles.homecard_description}>{item.description}</Paragraph>
             </Card.Content>
         </Card>
     );
@@ -295,72 +364,46 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }: HomeScreenProps) 
         return imageMap[uri] || require(`./profile_icon.jpg`);
     };
 
-
     return (
-        <SafeAreaView  style={styles.container}>
-            <View style={styles.headerContainer}>
+        <SafeAreaView  style={styles.home_container}>
+            <View style={styles.home_headerContainer}>
                 <TouchableOpacity onPress={handleProfilePress}>
                     <Avatar.Image size={40} source={getProfilePictureSource(selectedAvatarUri)} />
                 </TouchableOpacity>
-                {/* <TouchableOpacity onPress={handleFilterPress}>
-                    <IconButton
-                        icon="filter"
-                        size={24}
-                        onPress={handleFilterPress}
-                        style={styles.filterButton}
-                    />
-                </TouchableOpacity> */}
-                <Text style={styles.header}>GiveGetGo</Text>
+                <Text style={styles.home_header}>GiveGetGo</Text>
+                <View style={styles.home_placeholder} />
             </View>
             <Searchbar
                 placeholder="Search"
                 onChangeText={onChangeSearch}
                 value={searchQuery}
                 style={styles.searchbar}
+                // inputStyle={styles.searchbarInput}
+                // placeholderTextColor="#FAFAFA" 
+                // iconColor="#FAFAFA"   
             />
-            <FlatList
-                data={filteredPosts}
-                renderItem={renderItem}
-                // renderItem={renderItem}
-                keyExtractor={(item) => item.id}
-                numColumns={numColumns}
-                columnWrapperStyle={styles.column}
-            />
+            <ScrollView contentContainerStyle={styles.twocol_container}>
+                <View style={styles.column}>
+                    {columnOne.map(item => renderCard(item))}
+                </View>
+                <View style={styles.column}>
+                    {columnTwo.map(item => renderCard(item))}
+                </View>
+            </ScrollView>
         </SafeAreaView >
     );
 };
 
-const PostScreen: React.FC<MakingPostsProps> = () => {
-    // const handleImageUploadPress = () => {
-    // // TODO: Implement your image upload logic here (might be using "launchImageLibrary" but i could not get it work; stacloverflow shows this error happens only on ios aka expo go)
-    //     const options = {
-    //         mediaType: 'photo' as const,
-    //         quality: 1,
-    //     };
-    //   // Launch the image picker
-    //   launchImageLibrary(option, (response) => {
-    //     if (response.didCancel) {
-    //       console.log('User cancelled image picker');
-    //     } else if (response.error) {
-    //       console.log('ImagePicker Error: ', response.error);
-    //     } else {
-    //       // The response object contains various information about the selected image
-    //       const source = { uri: response.uri };
-    
-    //       // TODO: Implement your upload logic here
-    //       // For example, you could upload the image to a server using a POST request
-    //       console.log('Selected image: ', source);
-    //     }
-    //   });
-    // };
+const PostScreen: React.FC<PostScreenProps> = ({ navigation }: PostScreenProps) => {
+
+  const [fontsLoaded] = useFonts({ Montserrat_700Bold_Italic }); 
 
   const handlePostPress = () => {
     // TODO: Implement your submit post logic here
+    // TODO: generate PostID
+    navigation.navigate('PostSubmittedScreen')
     console.log('Post submitted with Title:', title, 'and Description:', description);
   };
-
-  // Placeholder for your image icon, replace 'require' with the actual path to your icon
-  const imageUploadIcon = require('./image_icon.jpg');
 
   const [title, onChangeTitle] = React.useState<string>('');
   const [description, onChangeDescription] = React.useState<string>('');
@@ -368,14 +411,17 @@ const PostScreen: React.FC<MakingPostsProps> = () => {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <SafeAreaView style={styles.container}>
                 <View style={styles.headerContainer}>
+                    <View style={styles.backActionPlaceholder} />
                     <Text style={styles.header}>GiveGetGo</Text>
+                    <View style={styles.backActionPlaceholder} />
                 </View>
-                <Card>
-                    <Card.Title title="Create a Post" right={(props) => <Button {...props} onPress={handlePostPress}>Post</Button>} />
+                <Card style={styles.post_card} mode="elevated">
+                    <Card.Title title={( <Text style={styles.create_post_title_text}>Create a Post</Text> )} right={(props) => 
+                        <Button {...props} style={styles.post_button} labelStyle={styles.post_button_text} onPress={handlePostPress}>Post</Button>} />
                     <Card.Content>
                         <TextInput
                             editable
-                            style={styles.input}
+                            style={styles.post_input_title}
                             onChangeText={onChangeTitle}
                             placeholder="Add a title..."
                             value={title}
@@ -386,6 +432,7 @@ const PostScreen: React.FC<MakingPostsProps> = () => {
                             multiline
                             numberOfLines={4}
                             maxLength={150}
+                            style={styles.post_input_description}
                             onChangeText={onChangeDescription}
                             placeholder="Add a description..."
                             value={description}
@@ -406,7 +453,23 @@ const PostScreen: React.FC<MakingPostsProps> = () => {
 };
 
 const NotificationScreen: React.FC<NotificationsProps> = ({ navigation }: NotificationsProps) => {
-    const [notifications, setNotifications] = React.useState<Notification[]>(notifications_data);                   
+
+    const [fontsLoaded] = useFonts({ Montserrat_700Bold_Italic }); 
+
+    const [notifications, setNotifications] = React.useState<Notification[]>(notifications_data);      
+    
+    useEffect(() => {                                                                     //fill this in to get db info
+        const fetchNotificationsData = async () => {
+          try {
+            const response = await fetch('URL_TO_YOUR_BACKEND/notifications_data_endpoint');
+            const json = await response.json();
+            setNotifications(json); // Adjust this depending on the structure of your JSON
+          } catch (error) {
+            // console.error(error); // uncomment this after finish frontend developing
+          }
+        };
+        fetchNotificationsData();
+      }, []);
 
     const deleteNotification = (id: string) => {
         setNotifications(currentNotifications => currentNotifications.filter(notification => notification.id !== id));
@@ -432,7 +495,7 @@ const NotificationScreen: React.FC<NotificationsProps> = ({ navigation }: Notifi
             <Paragraph style={styles.notifications_description}>{item.description}</Paragraph>
         </Card.Content>
         <Card.Actions>
-            <Paragraph style={{ flex: 1 }}>...</Paragraph>
+            <Paragraph style={styles.notifications_dots}>...</Paragraph>
             <IconButton
                 icon="trash-can" 
                 size={18} 
@@ -446,10 +509,13 @@ const NotificationScreen: React.FC<NotificationsProps> = ({ navigation }: Notifi
     return (
         <SafeAreaView  style={styles.container}>
             <View style={styles.headerContainer}>
+                <View style={styles.backActionPlaceholder} />
                 <Text style={styles.header}>GiveGetGo</Text>
+                <View style={styles.backActionPlaceholder} />
             </View>
             <FlatList
                 data={notifications}
+                style={styles.notifications_flatList}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.id}
                 // removeClippedSubviews={true} // If you want to improve performance on large lists, uncomment the line
@@ -459,6 +525,8 @@ const NotificationScreen: React.FC<NotificationsProps> = ({ navigation }: Notifi
 };
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsScreenProps) => {  
+
+    const [fontsLoaded] = useFonts({ Montserrat_700Bold_Italic }); 
 
     let currentUserInfo: UserInfo = { //should be loaded from the database
         name: 'Gilbert Hsu',
@@ -470,6 +538,19 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
       };
 
     const [userInfo, setUserInfo] = React.useState<UserInfo>(currentUserInfo);
+
+    useEffect(() => {                                                                    //fill this in to get db info
+        const fetchUserInfo = async () => {
+          try {
+            const response = await fetch('URL_TO_YOUR_BACKEND/user_info_endpoint');
+            const json = await response.json();
+            setUserInfo(json); // Adjust this depending on the structure of your JSON
+          } catch (error) {
+            // console.error(error); // uncomment this after finish frontend developing
+          }
+        };
+        fetchUserInfo();
+      }, []);
 
     function updateUserInfo(currentInfo: UserInfo, updates: Partial<UserInfo>): UserInfo {
         // Return a new object that combines the current info with the updates
@@ -521,9 +602,29 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
         setIsEditing_pic(true);
         navigation.navigate('AvatarPickerScreen')  
     };
+
+    // Restarting Expo
+    async function restartApp() {
+        try {
+          await Updates.reloadAsync();
+        } catch (error) {
+          console.error('Failed to restart the app:', error);
+        }
+      }
+      
+    // Set up modal
+    const [visible, setVisible] = useState(false);
+    const showModal = () => setVisible(true);
+    const hideModal = () => setVisible(false);
     
     const handleLogOut = () => {
-        console.log('Log out');
+        // add log out api here
+        showModal(); // Show the modal
+        setTimeout(() => {
+            hideModal(); // Hide the modal
+            restartApp(); // Then restart the app
+        }, 2000); // Delay in milliseconds
+        // restartApp()
     };
 
     // Get newAvatarUri from AvatarPickerScreen
@@ -588,140 +689,153 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
 
     return (
         <SafeAreaView  style={styles.container}>
-            <Text style={styles.header}>GiveGetGo</Text>
-            {/* <Text style={styles.userInfo}>Updated User Info: {JSON.stringify(userInfo, null, 2)}</Text> */ /*testing if the userInfo file got successfully updated*/} 
-            <Avatar.Image source={getProfilePictureSource(userInfo.profilePicture)} style={styles.settings_avatar} /> 
-            <Text style={styles.name}>{name}</Text>
-            <Text style={styles.details}>{`Class of ${userInfo.classYear} • ${userInfo.major}`}</Text>
-            <Text style={styles.details_bio}>{bio}</Text>
-            <Divider style={styles.divider} />
-            <Card style={styles.settings_card}>
-                {/* <Card.Title title="Name" /> */}
-                <Card.Content style={styles.settings_card_content}>
-                    {isEditing_name ? (
-                    <TextInput
-                        style={styles.codeInput}
-                        value={name}
-                        onChangeText={setName}
-                        returnKeyType="done"
-                        right={<TextInput.Icon icon="content-save" onPress={handleSavePress_name} />}
-                    />
-                    ) : (
-                    <List.Item
-                        title="Name"
-                        titleStyle={styles.settings_title}
-                        descriptionStyle={styles.settings_description}
-                        description={name}
-                        right={props => 
-                            <IconButton
-                                icon="pencil"
-                                size={20}
-                                onPress={handleEditPress_name}
-                            />}
-                    />
-                    )}
-                </Card.Content>
-            </Card>
-            <Divider />
-            <Card style={styles.settings_card}>
-                {/* <Card.Title title="Email" /> */}
-                <Card.Content style={styles.settings_card_content}>
-                    {isEditing_email ? (
-                    <TextInput
-                        style={styles.codeInput}
-                        value={email}
-                        onChangeText={setEmail}
-                        returnKeyType="done"
-                        right={<TextInput.Icon icon="content-save" onPress={handleSavePress_email} />}
-                    />
-                    ) : (
-                    <List.Item
-                        title="Email"
-                        titleStyle={styles.settings_title}
-                        descriptionStyle={styles.settings_description}
-                        description={email}
-                        right={props => 
-                            <IconButton
-                                icon="pencil"
-                                size={20}
-                                onPress={handleEditPress_email}
-                            />}
-                    />
-                    )}
-                </Card.Content>
-            </Card>
-            <Divider />
-            <Card style={styles.settings_card}>
-                {/* <Card.Title title="Bio" /> */}
-                <Card.Content style={styles.settings_card_content}>
-                    {isEditing_bio ? (
-                    <TextInput
-                        style={styles.codeInput}
-                        value={bio}
-                        onChangeText={setBio}
-                        returnKeyType="done"
-                        right={<TextInput.Icon icon="content-save" onPress={handleSavePress_bio} />}
-                    />
-                    ) : (
-                    <List.Item
-                        title="Bio"
-                        titleStyle={styles.settings_title}
-                        descriptionStyle={styles.settings_description}
-                        description={bio}
-                        right={props => 
-                            <IconButton
-                                icon="pencil"
-                                size={20}
-                                onPress={handleEditPress_bio}
-                            />}
-                    />
-                    )}
-                </Card.Content>
-            </Card>
-            <Divider />
-            <Card style={styles.settings_card}>
-                {/* <Card.Title title="Profile Picture" /> */}
-                <Card.Content style={styles.settings_card_content}>
-                    {/* {isEditing_pic ? (
-                    <TextInput
-                        style={styles.codeInput}
-                        value={profilePicture}
-                        onChangeText={setProfilePicture}
-                        returnKeyType="done"
-                        right={<TextInput.Icon icon="content-save" onPress={handleSavePress_pic} />}
-                    />
-                    ) : (
-                    <List.Item
-                        title="Profile Picture"
-                        titleStyle={styles.settings_title}
-                        descriptionStyle={styles.settings_description}
-                        description={profilePicture}
-                        right={props => 
-                            <IconButton
-                                icon="pencil"
-                                size={20}
-                                onPress={handleEditPress_pic}
-                            />}
-                    />
-                    )} */}
-                    <List.Item
-                        title="Profile Avatar"
-                        titleStyle={styles.settings_title}
-                        descriptionStyle={styles.settings_description}
-                        description={mapPictureToAnimal(userInfo.profilePicture)}
-                        right={props => 
-                            <IconButton
-                                icon="pencil"
-                                size={20}
-                                onPress={handleEditPress_pic}
-                            />}
-                    />
-                </Card.Content>
-            </Card>
-            <Divider style={styles.divider} />
-            <Button mode="contained" onPress={handleLogOut} style={styles.logOutButton}>
-                Log Out
-            </Button>
+            <View style={styles.headerContainer}>
+                <View style={styles.backActionPlaceholder} />
+                <Text style={styles.header}>GiveGetGo</Text>
+                <View style={styles.backActionPlaceholder} />
+            </View>
+            <View style={styles.settingsContainer}>
+                {/* <Text style={styles.userInfo}>Updated User Info: {JSON.stringify(userInfo, null, 2)}</Text> */ /*testing if the userInfo file got successfully updated*/} 
+                <Avatar.Image source={getProfilePictureSource(userInfo.profilePicture)} size={80} style={styles.settings_avatar} /> 
+                <Text style={styles.name}>{name}</Text>
+                <Text style={styles.details}>{`Class of ${userInfo.classYear} • ${userInfo.major}`}</Text>
+                <Text style={styles.details_bio}>{bio}</Text>
+                <Divider style={styles.divider} />
+                <Card style={styles.settings_card} mode="contained">
+                    {/* <Card.Title title="Name" /> */}
+                    <Card.Content style={styles.settings_card_content}>
+                        {isEditing_name ? (
+                        <TextInput
+                            style={styles.codeInput}
+                            value={name}
+                            onChangeText={setName}
+                            returnKeyType="done"
+                            right={<TextInput.Icon icon="content-save" onPress={handleSavePress_name} />}
+                        />
+                        ) : (
+                        <List.Item
+                            title="Name"
+                            titleStyle={styles.settings_title}
+                            descriptionStyle={styles.settings_description}
+                            description={name}
+                            right={props => 
+                                <IconButton
+                                    icon="pencil"
+                                    style={styles.settings_icon}
+                                    size={20}
+                                    onPress={handleEditPress_name}
+                                />}
+                        />
+                        )}
+                    </Card.Content>
+                </Card>
+                {/* <Divider /> */}
+                <Card style={styles.settings_card} mode="contained">
+                    {/* <Card.Title title="Email" /> */}
+                    <Card.Content style={styles.settings_card_content}>
+                        {isEditing_email ? (
+                        <TextInput
+                            style={styles.codeInput}
+                            value={email}
+                            onChangeText={setEmail}
+                            returnKeyType="done"
+                            right={<TextInput.Icon icon="content-save" onPress={handleSavePress_email} />}
+                        />
+                        ) : (
+                        <List.Item
+                            title="Email"
+                            titleStyle={styles.settings_title}
+                            descriptionStyle={styles.settings_description}
+                            description={email}
+                            right={props => 
+                                <IconButton
+                                    icon="pencil"
+                                    style={styles.settings_icon}
+                                    size={20}
+                                    onPress={handleEditPress_email}
+                                />}
+                        />
+                        )}
+                    </Card.Content>
+                </Card>
+                {/* <Divider /> */}
+                <Card style={styles.settings_card} mode="contained">
+                    {/* <Card.Title title="Bio" /> */}
+                    <Card.Content style={styles.settings_card_content}>
+                        {isEditing_bio ? (
+                        <TextInput
+                            style={styles.codeInput}
+                            value={bio}
+                            onChangeText={setBio}
+                            returnKeyType="done"
+                            right={<TextInput.Icon icon="content-save" onPress={handleSavePress_bio} />}
+                        />
+                        ) : (
+                        <List.Item
+                            title="Bio"
+                            titleStyle={styles.settings_title}
+                            descriptionStyle={styles.settings_description}
+                            description={bio}
+                            right={props => 
+                                <IconButton
+                                    icon="pencil"
+                                    style={styles.settings_icon}
+                                    size={20}
+                                    onPress={handleEditPress_bio}
+                                />}
+                        />
+                        )}
+                    </Card.Content>
+                </Card>
+                {/* <Divider /> */}
+                <Card style={styles.settings_card} mode="contained">
+                    {/* <Card.Title title="Profile Picture" /> */}
+                    <Card.Content style={styles.settings_card_content}>
+                        {/* {isEditing_pic ? (
+                        <TextInput
+                            style={styles.codeInput}
+                            value={profilePicture}
+                            onChangeText={setProfilePicture}
+                            returnKeyType="done"
+                            right={<TextInput.Icon icon="content-save" onPress={handleSavePress_pic} />}
+                        />
+                        ) : (
+                        <List.Item
+                            title="Profile Picture"
+                            titleStyle={styles.settings_title}
+                            descriptionStyle={styles.settings_description}
+                            description={profilePicture}
+                            right={props => 
+                                <IconButton
+                                    icon="pencil"
+                                    size={20}
+                                    onPress={handleEditPress_pic}
+                                />}
+                        />
+                        )} */}
+                        <List.Item
+                            title="Profile Avatar"
+                            titleStyle={styles.settings_title}
+                            descriptionStyle={styles.settings_description}
+                            description={mapPictureToAnimal(userInfo.profilePicture)}
+                            right={props => 
+                                <IconButton
+                                    icon="pencil"
+                                    style={styles.settings_icon}
+                                    size={20}
+                                    onPress={handleEditPress_pic}
+                                />}
+                        />
+                    </Card.Content>
+                </Card>
+                <Divider style={styles.divider} />
+                <Button mode="contained" onPress={handleLogOut} style={styles.logOutButton}>
+                    Log Out
+                </Button>
+                <Modal visible={visible} onDismiss={hideModal} contentContainerStyle={styles.modal}>
+                    <Text style={styles.logOutText}>See you again soon!</Text>
+                </Modal>
+            </View>
         </SafeAreaView >
     );
 };
@@ -730,29 +844,148 @@ const styles = StyleSheet.create({
 container: {
     flex: 1,
     marginTop: 50,
+    justifyContent: 'center',
 },
 headerContainer: {
     flexDirection: 'row', // Aligns items in a row
     alignItems: 'center', // Centers items vertically
-    justifyContent: 'space-between', // Distributes items evenly
-    paddingLeft: 10, // Adds padding to the left of the avatar
-    paddingRight: 10, // Adds padding to the right side
-},
+    justifyContent: 'space-between', // Distributes items evenly horizontally
+    paddingLeft: 10, 
+    paddingRight: 10, 
+    position: 'absolute', // So that while setting card to the vertical middle, it still stays at the same place
+    top: 0, 
+    left: 0,
+    right: 2,
+    zIndex: 1, // Ensure the headerContainer is above the card
+  },
 header: {
     fontSize: 22, // Increase the font size
     fontWeight: '600', // Make the font weight bold
-    fontStyle: 'italic',
+    fontFamily: 'Montserrat_700Bold_Italic',
     textAlign: 'center', // Center the text
+    color: '#444444', // Dark gray color
 },
-card: {
+
+backActionPlaceholder: {
+    width: 48, // This should match the width of the Appbar.BackAction for balance
+    height: 52,
+},
+home_container: {
+    flex: 1,
+    marginTop: 50,
+    justifyContent: 'center',
+},
+home_headerContainer: {
+    flexDirection: 'row', // Aligns items in a row
+    alignItems: 'center', // Centers items vertically
+    justifyContent: 'space-between', // Distributes items evenly horizontally
+    paddingLeft: 10, 
+    paddingRight: 10, 
+    position: 'absolute', // So that while setting card to the vertical middle, it still stays at the same place
+    top: 0, 
+    left: 6,
+    right: 0,
+    zIndex: 1, // Ensure the headerContainer is above the card
+  },
+home_header: {
+    fontSize: 22, // Increase the font size
+    fontWeight: '600', // Make the font weight bold
+    fontFamily: 'Montserrat_700Bold_Italic',
+    textAlign: 'center', // Center the text
+    color: '#444444', // Dark gray color
+},
+home_placeholder: {
+    width: 48, // This should match the width of the Appbar.BackAction for balance
+    height: 52,
+},
+homecard_title: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 1,
+    marginBottom: 1,
+    lineHeight: 0,
+    // color: '#FAFAFA',
+},
+homecard_description: {
+    fontSize: 14,
+    // fontStyle:'italic',
+    marginBottom: 1,
+    // color: '#FAFAFA',
+},
+home_card: { 
+    borderRadius: 15, // Add rounded corners to the card
     margin: 8,
-    overflow: 'scroll',
+    justifyContent: 'center',
+    padding: 3,
+    // backgroundColor: 'black', 
+},
+twocol_container: {
+    flexDirection: 'row',
+    padding: 10,
 },
 column: {
-    justifyContent: 'space-between',
+    flex: 1,
 },
 searchbar: {
     margin: 10,
+    marginTop: 65,   
+    // backgroundColor: 'black',
+},
+// searchbarInput: {
+//     color: '#FAFAFA',
+// },
+card: { //page gets longer when there are more contexts
+    borderRadius: 15, // Add rounded corners to the card
+    marginVertical: 6,
+    marginHorizontal: 12,
+    elevation: 0, // Adjust for desired shadow depth
+    // backgroundColor: '#ffffff', 
+    padding: 12, // Add padding inside the card
+    // marginTop: 170,
+},
+post_card: { //page gets longer when there are more contexts
+    borderRadius: 15, // Add rounded corners to the card
+    marginVertical: 15,
+    marginHorizontal: 12,
+    elevation: 0, // Adjust for desired shadow depth
+    padding: 12, // Add padding inside the card
+    height: 400,
+},
+create_post_title_text: {
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: -5,
+    marginRight: 100,
+},
+post_input_title: {
+    padding: 0,
+    fontSize: 16,
+    marginBottom: 10, 
+    marginTop: -5, 
+},
+post_input_description: {
+    padding: 0,
+    fontSize: 16,
+    marginBottom: 5, 
+    textAlignVertical: 'top',
+    paddingBottom: 140,
+},
+titleButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+},
+post_button: {
+    color: '#ffffff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 5,
+    fontSize: 18,
+    elevation: 2,
+},
+post_button_text: {   
+    fontSize: 15,          
 },
 resultsContainer: {
     marginTop: 20,
@@ -761,29 +994,35 @@ resultItem: {
     padding: 10,
     fontSize: 18,
 },
-filterButton: {
-    position: 'absolute', 
-    left: 280, 
-    top: -20, 
-    margin: 0, 
+settingsContainer: {
+    marginTop: -15,
 },
-input: {
-    marginBottom: 10,
+logOutButton: {
+    position: 'absolute', 
+    left: 10,
+    right: 10, 
+    bottom: -50,
+    alignSelf: 'center', 
 },
 settings_avatar: {
     alignSelf: 'center',
-    marginTop: 20,
+    marginTop: 25,
     backgroundColor: '#c7c7c7', // Placeholder color
+},
+codeInput: {
+    height: 40,
+    marginVertical: 10,
 },
 name: {
     fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
     marginTop: 8,
+    marginBottom: 4,
 },
 details: {
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
 },
 details_bio: {
     textAlign: 'center',
@@ -791,31 +1030,46 @@ details_bio: {
     marginBottom: 6,
 },
 divider: {
-    marginVertical: 4,
-},
-logOutButton: {
-    margin: 0,
+    marginVertical: 8,
 },
 settings_title: {
     fontSize: 16,
     fontWeight: 'bold',
+    marginTop: -3,
+    marginBottom: 2,
 },
 settings_description: {
     fontSize: 14,
 },
 settings_card: {
-    marginTop: 3,
-    marginBottom: 3,
+    marginTop: 5,
+    marginBottom: 5,
     maxHeight: 60,
+    borderRadius: 15, // Add rounded corners to the card
+    // marginVertical: 6,
+    marginHorizontal: 12,
+    elevation: 0, // Adjust for desired shadow depth
+    // backgroundColor: '#ffffff', 
+    padding: 5, // Add padding inside the card
 },
 settings_card_content: {
     marginTop: -10, 
     paddingTop: 0
 },
+settings_icon: {
+    marginTop: 2, 
+    marginRight: -10, 
+},
+notifications_flatList: {
+    marginTop: 55,
+},
 notifications_card: {
-    margin: 6,
-    padding: 0,
-    maxHeight: 150,
+    borderRadius: 15, // Add rounded corners to the card
+    marginVertical: 6,
+    marginHorizontal: 12,
+    elevation: 0, // Adjust for desired shadow depth
+    // backgroundColor: '#ffffff', 
+    padding: 3, // Add padding inside the card
 },
 notifications_title: {
     fontSize: 16,
@@ -835,20 +1089,32 @@ notifications_time: {
 },
 notifications_description: {
     fontSize: 15,
-    top: 20, 
+    top: 17, //20
     right: 8, 
-    padding: 9,
+    padding: 8,
 },
-notifications_seeMore: {
-    fontSize: 13,
-    color: '#6200ee', // assuming a primary color
-    fontWeight: 'bold',
-    marginTop: -16,
+notifications_dots: {
+    top: 0, 
+    flex: 1,
 },
 deleteIcon: {
     width: 24, // Set the width of the icon
     height: 24, // Set the height of the icon
-    alignSelf: 'center' // Center align the icon horizontally
+    alignSelf: 'center', // Center align the icon horizontally
+    marginTop: 1,
+    marginBottom: 1,
+  },
+modal: {
+    backgroundColor: 'white',
+    padding: 20,
+    margin: 20,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+logOutText: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: 'center',
   },
 });
 
