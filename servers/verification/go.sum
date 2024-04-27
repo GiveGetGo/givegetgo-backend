@@ -1,5 +1,9 @@
-github.com/GiveGetGo/shared v0.2.9 h1:sEnNOv39WIaPVtf3SGr6dPKA5vWuZ9uH7pfVg05qtqg=
-github.com/GiveGetGo/shared v0.2.9/go.mod h1:9WF2GGC0wrCp7SDl3oeZ3crBP9KnHfMkNKesSxzkJVU=
+github.com/GiveGetGo/shared v0.2.11 h1:UdCyIs1rK9IpmzuGkekXjukni25rHhK3E4WCByuK+z0=
+github.com/GiveGetGo/shared v0.2.11/go.mod h1:9WF2GGC0wrCp7SDl3oeZ3crBP9KnHfMkNKesSxzkJVU=
+github.com/GiveGetGo/shared v0.2.12 h1:1mXtBnMAPCbqNC4kEcZTtpY1Mhg8OlXj3cXweRnQ+/w=
+github.com/GiveGetGo/shared v0.2.12/go.mod h1:9WF2GGC0wrCp7SDl3oeZ3crBP9KnHfMkNKesSxzkJVU=
+github.com/GiveGetGo/shared v0.2.13 h1:Sqfquruy1ok9Z6iTlflYqRead9sZOi3UvBdbzj0bHJ8=
+github.com/GiveGetGo/shared v0.2.13/go.mod h1:9WF2GGC0wrCp7SDl3oeZ3crBP9KnHfMkNKesSxzkJVU=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
 github.com/bsm/ginkgo/v2 v2.12.0/go.mod h1:SwYbGRRDovPVboqFv0tPTcG1sN61LM1Z4ARdbAV9g4c=
 github.com/bsm/gomega v1.27.10 h1:yeMWxP2pV2fG3FgAODIY8EiRE3dy0aeFYt4l7wh6yKA=

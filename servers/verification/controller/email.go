@@ -39,6 +39,12 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 			// generate a verification code
 			verificationCode, err := verificationUtils.GenerateRegisterVerificationCode(req.UserID)
 			if err != nil {
+				if err.Error() == "a recent verification code already exists and is still valid" {
+					// If the specific error is about an existing verification code
+					res.ResponseError(c, http.StatusConflict, types.VerificationCodeExists())
+					return
+				}
+				// Handle other internal errors
 				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 				return
 			}
@@ -56,6 +62,11 @@ func RequestEmailVerificationHandler(verificationUtils utils.IVerificationUtils)
 			// generate a verification code
 			verificationCode, err := verificationUtils.GenerateResetPasswordVerificationCode(req.UserID)
 			if err != nil {
+				if err.Error() == "a recent verification code already exists and is still valid" {
+					// If the specific error is about an existing verification code
+					res.ResponseError(c, http.StatusConflict, types.VerificationCodeExists())
+					return
+				}
 				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 				return
 			}
@@ -95,12 +106,18 @@ func VerifyEmailVerificationHandler(verificationUtils utils.IVerificationUtils) 
 			return
 		}
 
+		user, err := verificationUtils.GetUserInfo(c)
+		if err != nil {
+			res.ResponseError(c, http.StatusUnauthorized, types.InvalidCredentials())
+			return
+		}
+
 		// idnetify the event
 		switch req.Event {
 		case types.RegisterEvent:
 			// verify the verification code
 			// query the latest verification code for the email
-			latestVerificationCode, err := verificationUtils.GetLatestRegisterVerificationCode(req.UserID)
+			latestVerificationCode, err := verificationUtils.GetLatestRegisterVerificationCode(user.UserID)
 			if err != nil {
 				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 				return
@@ -124,7 +141,7 @@ func VerifyEmailVerificationHandler(verificationUtils utils.IVerificationUtils) 
 		case types.ResetPasswordEvent:
 			// verify the verification code
 			// query the latest verification code for the email
-			latestVerificationCode, err := verificationUtils.GetLatestResetPasswordVerificationCode(req.UserID)
+			latestVerificationCode, err := verificationUtils.GetLatestResetPasswordVerificationCode(user.UserID)
 			if err != nil {
 				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 				return

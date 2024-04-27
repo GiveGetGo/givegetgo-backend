@@ -201,6 +201,11 @@ func (u *UserUtils) RequestRegisterVerificationEmail(userID uint, username strin
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusConflict {
+		log.Println("A recent verification code already exists, no new code sent.")
+		return nil
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		log.Println("verification service responded with status: ", resp.StatusCode)
 		// Handle non-OK responses here
@@ -251,6 +256,11 @@ func (u *UserUtils) RequestForgetpassVerificationEmail(userID uint, username str
 		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusConflict {
+		log.Println("A recent verification code already exists, no new code sent.")
+		return nil
+	}
 
 	// Check the response status
 	if resp.StatusCode != http.StatusOK {
