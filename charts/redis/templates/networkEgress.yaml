@@ -13,6 +13,7 @@ spec:
         - post
         - user
         - verification
+        - notification
   policyTypes:
     - Egress
   egress:
