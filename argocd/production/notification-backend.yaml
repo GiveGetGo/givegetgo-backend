@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: givegetgo-notification-backend
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/GiveGetGo/givegetgo-backend.git'
+    path: 'charts/notification'
+    targetRevision: main
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: givegetgo-production
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

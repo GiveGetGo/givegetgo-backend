@@ -11,6 +11,7 @@ servers/verification/.env.verification
 servers/post/.env.post
 servers/bid/.env.bid
 servers/match/.env.match
+servers/notification/.env.notification
 redis/.env.redis
 .env
 
