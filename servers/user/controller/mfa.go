@@ -3,18 +3,20 @@ package controller
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"user/utils"
 
 	"github.com/GiveGetGo/shared/res"
 	"github.com/GiveGetGo/shared/types"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
 	"github.com/skip2/go-qrcode"
+	"gorm.io/gorm"
 )
 
 // func RequestMFAVerificationHandler - request MFA verification
@@ -27,10 +29,27 @@ func RequestMFAVerificationHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 			return
 		}
 
-		// Check if user exists
-		user, err := userUtils.GetUserByEmail(req.Email)
-		if err != nil {
+		// get user from session
+		session := sessions.Default(c)
+		userIdValue := session.Get("userid")
+		if userIdValue == nil {
+			res.ResponseError(c, http.StatusUnauthorized, types.InvalidCredentials())
+			return
+		}
 
+		userId, ok := userIdValue.(uint)
+		if !ok {
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			return
+		}
+
+		user, err := userUtils.GetUserByID(uint(userId))
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				res.ResponseError(c, http.StatusNotFound, types.UserNotFound())
+			} else {
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			}
 			return
 		}
 
@@ -73,7 +92,7 @@ func RequestMFAVerificationHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 
 		// store the encrypted secret in the database
 		encryptedSecretBase64 := base64.StdEncoding.EncodeToString(encryptedSecret)
-		err = userUtils.StoreEncryptedTOTPSecret(req.UserID, encryptedSecretBase64)
+		err = userUtils.StoreEncryptedTOTPSecret(user.UserID, encryptedSecretBase64)
 		if err != nil {
 			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
@@ -92,10 +111,27 @@ func VerifyMFAHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 			return
 		}
 
-		// Retrieve the user's encrypted TOTP secret from the database.
-		user, err := userUtils.GetUserByID(req.UserID)
+		// get user from session
+		session := sessions.Default(c)
+		userIdValue := session.Get("userid")
+		if userIdValue == nil {
+			res.ResponseError(c, http.StatusUnauthorized, types.InvalidCredentials())
+			return
+		}
+
+		userId, ok := userIdValue.(uint)
+		if !ok {
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			return
+		}
+
+		user, err := userUtils.GetUserByID(uint(userId))
 		if err != nil {
-			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				res.ResponseError(c, http.StatusNotFound, types.UserNotFound())
+			} else {
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			}
 			return
 		}
 
@@ -128,7 +164,7 @@ func VerifyMFAHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		}
 
 		// Mark the user as MFA verified.
-		err = userUtils.MarkMFAVerified(req.UserID)
+		err = userUtils.MarkMFAVerified(user.UserID)
 		if err != nil {
 			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
@@ -141,17 +177,26 @@ func VerifyMFAHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 // func MFAQRCodeHandler - generate a QR code for MFA
 func MFAQRCodeHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID := c.Param("userid") // Assuming you're getting the userID from the URL
-		userIDUint, err := strconv.ParseUint(userID, 10, 64)
-		if err != nil {
+		session := sessions.Default(c)
+		userIdValue := session.Get("userid")
+		if userIdValue == nil {
+			res.ResponseError(c, http.StatusUnauthorized, types.InvalidCredentials())
+			return
+		}
+
+		userId, ok := userIdValue.(uint)
+		if !ok {
 			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
 			return
 		}
 
-		// Get the user
-		user, err := userUtils.GetUserByID(uint(userIDUint))
+		user, err := userUtils.GetUserByID(uint(userId))
 		if err != nil {
-			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				res.ResponseError(c, http.StatusNotFound, types.UserNotFound())
+			} else {
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			}
 			return
 		}
 

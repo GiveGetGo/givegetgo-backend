@@ -364,3 +364,44 @@ func EditMeHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		res.ResponseSuccess(c, http.StatusOK, "User updated", types.Success())
 	}
 }
+
+func VerifiedHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session := sessions.Default(c)
+		userIdValue := session.Get("userid")
+		if userIdValue == nil {
+			res.ResponseError(c, http.StatusUnauthorized, types.InvalidCredentials())
+			return
+		}
+
+		userId, ok := userIdValue.(uint)
+		if !ok {
+			res.ResponseError(c, http.StatusUnauthorized, types.InvalidCredentials())
+			return
+		}
+
+		user, err := userUtils.GetUserByID(userId)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				res.ResponseError(c, http.StatusNotFound, types.UserNotFound())
+			} else {
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			}
+			return
+		}
+
+		// Check if the user's email is verified
+		if !user.EmailVerified {
+			res.ResponseError(c, http.StatusBadRequest, types.EmailNotVerified())
+			return
+		}
+
+		// Check if the user is already MFA verified
+		if user.MFAVerified {
+			res.ResponseError(c, http.StatusBadRequest, types.AlreadyVerified())
+			return
+		}
+
+		res.ResponseSuccess(c, http.StatusOK, "verified", types.Success())
+	}
+}

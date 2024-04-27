@@ -13,6 +13,8 @@ import (
 	"time"
 	"verification/schema"
 
+	"github.com/GiveGetGo/shared/types"
+	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
@@ -33,6 +35,7 @@ type IVerificationUtils interface {
 	SendResetPasswordVerificationCode(username string, email string, code string) error
 	GetLatestResetPasswordVerificationCode(userID uint) (string, error)
 	GenerateVerifiedSession(ctx context.Context, userID uint, event string) error
+	GetUserInfo(c *gin.Context) (types.UserInfoResponse, error)
 }
 
 func NewVerificationUtils(db *gorm.DB, redisClient *redis.Client) *VerificationUtils {
@@ -41,20 +44,33 @@ func NewVerificationUtils(db *gorm.DB, redisClient *redis.Client) *VerificationU
 
 // generateRegisterVerificationCode generates a random 7-digit code for email verification, and stores it in the database
 func (u *VerificationUtils) GenerateRegisterVerificationCode(userID uint) (string, error) {
+	var recentVerification schema.RegisterEmailVerification
+
+	// Check for existing verification code that has not expired
+	err := u.DB.Where("user_id = ? AND expiration_time > ?", userID, time.Now()).Order("expiration_time desc").First(&recentVerification).Error
+	if err == nil {
+		// If an unexpired code exists, return a new error indicating that a code already exists
+		return "", fmt.Errorf("a recent verification code already exists and is still valid")
+	} else if err != gorm.ErrRecordNotFound {
+		// Handle unexpected errors
+		return "", err
+	}
+
+	// If no recent code or expired, generate a new verification code
 	var registerVerification schema.RegisterEmailVerification
 
-	// set the user id
+	// Set the user id
 	registerVerification.UserID = userID
 
-	// generate a random 7-digit code
+	// Generate a random 7-digit code
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	verificationCode := fmt.Sprintf("%07d", rng.Intn(1000000))
 	registerVerification.VerificationCode = verificationCode
 
-	// set the expiration time to 5 minutes from now
+	// Set the expiration time to 5 minutes from now
 	registerVerification.ExpirationTime = time.Now().Add(5 * time.Minute)
 
-	// create the verification record in the database everytime (for monitoring purposes), return an error if it fails
+	// Create the verification record in the database, return an error if it fails
 	return verificationCode, u.DB.Create(&registerVerification).Error
 }
 
@@ -211,4 +227,60 @@ func (u *VerificationUtils) GenerateVerifiedSession(ctx context.Context, userID 
 	log.Println("session key:", sessionKey)
 
 	return nil // Return nil if no errors occurred
+}
+
+func (u *VerificationUtils) GetUserInfo(c *gin.Context) (types.UserInfoResponse, error) {
+	userServiceURL := os.Getenv("USER_SERVICE_URL") + "/v1/user/me"
+
+	// Extract the session cookie from the incoming request
+	cookie, err := c.Request.Cookie("givegetgo")
+	if err != nil {
+		return types.UserInfoResponse{}, errors.New("session cookie is missing")
+	}
+
+	// Create a new request to the user service
+	req, err := http.NewRequest("GET", userServiceURL, nil)
+	if err != nil {
+		return types.UserInfoResponse{}, err
+	}
+	req.Header.Set("Cookie", cookie.String()) // Forward the session cookie
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return types.UserInfoResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	// Check response status code
+	if resp.StatusCode != http.StatusOK {
+		return types.UserInfoResponse{}, errors.New("failed to verify session or session not found")
+	}
+
+	// Decode the JSON response into a struct
+	var fullResponse types.FullResponseWithData
+	if err := json.NewDecoder(resp.Body).Decode(&fullResponse); err != nil {
+		return types.UserInfoResponse{}, err
+	}
+
+	// Convert the Data field from map to UserInfoResponse
+	dataMap, ok := fullResponse.Data.(map[string]interface{})
+	if !ok {
+		log.Println("Data type assertion to map failed")
+		return types.UserInfoResponse{}, fmt.Errorf("response data is not a map")
+	}
+
+	jsonData, err := json.Marshal(dataMap)
+	if err != nil {
+		log.Println("Error marshaling data map to JSON:", err)
+		return types.UserInfoResponse{}, err
+	}
+
+	var userInfo types.UserInfoResponse
+	if err := json.Unmarshal(jsonData, &userInfo); err != nil {
+		log.Println("Error unmarshaling JSON to UserInfoResponse:", err)
+		return types.UserInfoResponse{}, err
+	}
+
+	return userInfo, nil
 }
