@@ -16,24 +16,36 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 
 	// Set up verification utils
 	postUtils := utils.NewPostUtils(DB, redisClient)
+	defaultRateLimiter := middleware.SetupRateLimiter(redisClient, "60-M")
+	sensitiveRateLimiter := middleware.SetupRateLimiter(redisClient, "10-M")
 
 	// Public routes - without auth middleware
 	unAuthGroup := r.Group("/v1")
+	unAuthGroup.Use(defaultRateLimiter)
 	{
 		unAuthGroup.GET("/post/health", sharedController.HealthCheckHandler())
 	}
 
 	// Public routes - with auth middleware
 	postAuthGroup := r.Group("/v1")
+	postAuthGroup.Use(defaultRateLimiter)
 	postAuthGroup.Use(middleware.AuthMiddleware())
 	{
-		postAuthGroup.POST("/post", controller.AddPostHandler(postUtils))
-		postAuthGroup.GET("/post", controller.GetPostHandler(postUtils))
-		postAuthGroup.GET("/post/archive", controller.GetPostArchiveHandler(postUtils))
-		postAuthGroup.GET("/post/by-user", controller.GetPostByUserIdHandler(postUtils))
-		postAuthGroup.GET("/post/:id", controller.GetPostByPostIdHandler(postUtils))
-		postAuthGroup.PUT("/post/:id", controller.EditPostByIdHandler(postUtils))
-		postAuthGroup.DELETE("/post/:id", controller.DeletePostHandler(postUtils))
+		defaultPostAuthGroup := postAuthGroup.Group("")
+		{
+			defaultPostAuthGroup.GET("/post", controller.GetPostHandler(postUtils))
+			defaultPostAuthGroup.GET("/post/:id", controller.GetPostByPostIdHandler(postUtils))
+			defaultPostAuthGroup.GET("/post/by-user", controller.GetPostByUserIdHandler(postUtils))
+		}
+
+		sensitivePostAuthGroup := postAuthGroup.Group("")
+		sensitivePostAuthGroup.Use(sensitiveRateLimiter)
+		{
+			sensitivePostAuthGroup.POST("/post", controller.AddPostHandler(postUtils))
+			sensitivePostAuthGroup.GET("/post/archive", controller.GetPostArchiveHandler(postUtils))
+			sensitivePostAuthGroup.PUT("/post/:id", controller.EditPostByIdHandler(postUtils))
+			sensitivePostAuthGroup.DELETE("/post/:id", controller.DeletePostHandler(postUtils))
+		}
 	}
 
 	// interal routes

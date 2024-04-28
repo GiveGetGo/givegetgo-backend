@@ -2,6 +2,7 @@ package server
 
 import (
 	"bid/controller"
+	"bid/middleware"
 	"bid/utils"
 
 	sharedController "github.com/GiveGetGo/shared/controller"
@@ -15,12 +16,30 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 
 	// Set up match utils
 	bidUtils := utils.NewBidUtils(DB, redisClient)
+	defaultRateLimiter := middleware.SetupRateLimiter(redisClient, "60-M")
+	sensitiveRateLimiter := middleware.SetupRateLimiter(redisClient, "10-M")
 
 	// Public routes - without auth middleware
 	bidGroup := r.Group("/v1/bid")
+	bidGroup.Use(defaultRateLimiter)
 	{
 		bidGroup.GET("/health", sharedController.HealthCheckHandler())
-		bidGroup.POST("/bid", controller.AddBidHandler(bidUtils))
+	}
+
+	bidAuthGroup := r.Group("/v1")
+	bidAuthGroup.Use(defaultRateLimiter)
+	bidAuthGroup.Use(middleware.AuthMiddleware())
+	{
+		// defaultBidAuthGroup := bidAuthGroup.Group("")
+		// {
+
+		// }
+
+		sensitiveBidAuthGroup := bidAuthGroup.Group("")
+		sensitiveBidAuthGroup.Use(sensitiveRateLimiter)
+		{
+			sensitiveBidAuthGroup.POST("/bid", controller.AddBidHandler(bidUtils))
+		}
 	}
 
 	return r
