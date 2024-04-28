@@ -29,6 +29,7 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 		unAuthGroup.GET("/user/health", sharedController.HealthCheckHandler())
 		unAuthGroup.POST("/user/register", controller.RegisterHandler(userUtils))
 		unAuthGroup.POST("/user/login", controller.LoginHandler(userUtils))
+		unAuthGroup.GET("/user/logout", controller.LogoutHandler(userUtils))
 	}
 
 	// Public routes - with auth middleware
