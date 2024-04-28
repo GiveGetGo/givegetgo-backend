@@ -14,8 +14,11 @@ import (
 	"user/middleware"
 	"user/schema"
 
+	"github.com/GiveGetGo/shared/res"
 	"github.com/GiveGetGo/shared/types"
+	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"github.com/skip2/go-qrcode"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -42,6 +45,7 @@ type IUserUtils interface {
 	MarkMFAVerified(userID uint) error
 	StoreEncryptedTOTPSecret(userID uint, encryptedSecret string) error
 	CheckEmailVerificationSession(ctx context.Context, userID uint, event string) error
+	GenerateAndSendQRCode(c *gin.Context, email string, secret []byte)
 }
 
 type UserUtils struct {
@@ -363,4 +367,14 @@ func (u *UserUtils) UpdateUser(userID uint, updates types.UserUpdateRequest) err
 		"profile_info": updates.ProfileInfo,
 	}
 	return u.DB.Model(&schema.User{}).Where("user_id = ?", userID).Updates(updateMap).Error
+}
+
+func (u *UserUtils) GenerateAndSendQRCode(c *gin.Context, email string, secret []byte) {
+	uri := fmt.Sprintf("otpauth://totp/GiveGetGo:%s?secret=%s&issuer=GiveGetGo", email, string(secret))
+	qrCode, err := qrcode.Encode(uri, qrcode.Medium, 256)
+	if err != nil {
+		res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+		return
+	}
+	c.Data(http.StatusOK, "image/png", qrCode)
 }

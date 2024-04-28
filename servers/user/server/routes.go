@@ -48,9 +48,8 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 
 		mfaGroup := authGroup.Group("/mfa")
 		{
-			mfaGroup.POST("/request", controller.RequestMFAVerificationHandler(userUtils))
-			mfaGroup.POST("/verify", controller.VerifyMFAHandler(userUtils))
-			mfaGroup.GET("/qrcode/:userid", controller.MFAQRCodeHandler(userUtils))
+			mfaGroup.POST("", controller.VerifyMFAHandler(userUtils))
+			mfaGroup.GET("", controller.GetMFAHandler(userUtils))
 		}
 	}
 
