@@ -21,9 +21,10 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		// Prepare the request to verify the session via the user service
-		userServiceURL := os.Getenv("USER_SERVICE_URL") + "/v1/user/verified"
+		userServiceURL := os.Getenv("USER_SERVICE_URL") + "/v1/user/session"
 		client := &http.Client{Timeout: 10 * time.Second}
 		req, _ := http.NewRequest("GET", userServiceURL, nil)
+		req.Header.Set("Cookie", cookie.String())
 
 		// Make the HTTP request to the user service
 		resp, err := client.Do(req)
