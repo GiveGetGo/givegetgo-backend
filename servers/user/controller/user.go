@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
 	"user/schema"
 	"user/utils"
 
@@ -61,8 +62,16 @@ func RegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 			return
 		}
 
-		// Create the user
-		user, err = userUtils.CreateUser(req.Email, req.Email, hashedPassword, req.Class, req.Major)
+		// Extract the username from the email
+		splitEmail := strings.Split(req.Email, "@")
+		if len(splitEmail) == 0 {
+			res.ResponseError(c, http.StatusBadRequest, types.InvalidEmail())
+			return
+		}
+		username := splitEmail[0]
+
+		// Create the user with the extracted username
+		user, err = userUtils.CreateUser(username, req.Email, hashedPassword, req.Class, req.Major)
 		if err != nil {
 			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
