@@ -3,5 +3,5 @@ session:
   max_age: 86400
   secure: false
   http_only: true
-  domain: localhost
-  #domain: api.givegetgo.xyz
+  #domain: localhost
+  domain: api.givegetgo.xyz

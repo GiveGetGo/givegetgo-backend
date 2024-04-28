@@ -21,6 +21,11 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	{
 		bidGroup.GET("/health", sharedController.HealthCheckHandler())
 		bidGroup.POST("/bid", controller.AddBidHandler(bidUtils))
+		bidGroup.GET("/getbidbyp/:postID", controller.GetBidsForPostHandler(bidUtils))
+		bidGroup.GET("/getbidbyb/:bidID", controller.FindBidByIDHandler(bidUtils))
+		bidGroup.DELETE("/delete/:bidID", controller.DeleteBidHandler(bidUtils))
+		bidGroup.PUT("/put/:bidID", controller.UpdateBidDescriptionHandler(bidUtils))
+
 	}
 
 	return r
