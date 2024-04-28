@@ -16,17 +16,21 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 
 	// Set up verification utils
 	verificationUtils := utils.NewVerificationUtils(DB, redisClient)
+	defaultRateLimiter := middleware.SetupRateLimiter(redisClient, "60-M")
+	sensitiveRateLimiter := middleware.SetupRateLimiter(redisClient, "10-M")
 
 	// Public routes - without auth middleware
 	unAuthGroup := r.Group("/v1")
+	unAuthGroup.Use(defaultRateLimiter)
 	{
 		unAuthGroup.GET("/verification/health", sharedController.HealthCheckHandler())
 	}
 
 	// Public routes - with auth middleware
 	verificationAuthGroup := r.Group("/v1/verification")
+	verificationAuthGroup.Use(defaultRateLimiter)
 	verificationAuthGroup.Use(middleware.AuthMiddleware())
-	// TODO: Add auth middleware
+	verificationAuthGroup.Use(sensitiveRateLimiter)
 	{
 		verificationAuthGroup.POST("/verify-email", controller.VerifyEmailVerificationHandler(verificationUtils))
 	}

@@ -16,19 +16,31 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 
 	// Set up verification utils
 	notificationUtils := utils.NewNotificationUtils(DB, redisClient)
+	defaultRateLimiter := middleware.SetupRateLimiter(redisClient, "60-M")
+	sensitiveRateLimiter := middleware.SetupRateLimiter(redisClient, "10-M")
 
 	// Public routes - without auth middleware
 	unAuthGroup := r.Group("/v1")
+	unAuthGroup.Use(defaultRateLimiter)
 	{
 		unAuthGroup.GET("/notification/health", sharedController.HealthCheckHandler())
 	}
 
 	// Public routes - with auth middleware
 	notificationAuthGroup := r.Group("/v1")
+	notificationAuthGroup.Use(defaultRateLimiter)
 	notificationAuthGroup.Use(middleware.AuthMiddleware())
 	{
-		notificationAuthGroup.GET("/notfication/:id", controller.GetNotificationByUserID(notificationUtils))
-		notificationAuthGroup.DELETE("/notification/:id", controller.DeleteNotification(notificationUtils))
+		defaultNotificationAuthGroup := notificationAuthGroup.Group("")
+		{
+			defaultNotificationAuthGroup.GET("/notfication", controller.GetNotification(notificationUtils))
+		}
+
+		sensitiveNotificationAuthGroup := notificationAuthGroup.Group("")
+		sensitiveNotificationAuthGroup.Use(sensitiveRateLimiter)
+		{
+			sensitiveNotificationAuthGroup.DELETE("/notification/:id", controller.DeleteNotification(notificationUtils))
+		}
 	}
 
 	// interal routes

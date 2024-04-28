@@ -1,10 +1,19 @@
 package utils
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"net/http"
 	"notification/db"
 	"notification/middleware"
 	"notification/schema"
+	"os"
+	"time"
 
+	"github.com/GiveGetGo/shared/types"
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
@@ -12,6 +21,7 @@ type INotificationUtils interface {
 	GetNotificationByUserID(userID uint) ([]schema.Notification, error)
 	DeleteNotificationByID(notificationID uint) error
 	CreateNotification(notification schema.Notification) (*schema.Notification, error)
+	GetUserInfo(c *gin.Context) (types.UserInfoResponse, error)
 }
 
 // Ensure PostUtils implements IPostUtils
@@ -59,4 +69,61 @@ func (nu *NotificationUtils) CreateNotification(notification schema.Notification
 		return nil, result.Error
 	}
 	return &notification, nil
+}
+
+// GetUserInfo
+func (nu *NotificationUtils) GetUserInfo(c *gin.Context) (types.UserInfoResponse, error) {
+	userServiceURL := os.Getenv("USER_SERVICE_URL") + "/v1/user/me"
+
+	// Extract the session cookie from the incoming request
+	cookie, err := c.Request.Cookie("givegetgo")
+	if err != nil {
+		return types.UserInfoResponse{}, errors.New("session cookie is missing")
+	}
+
+	// Create a new request to the user service
+	req, err := http.NewRequest("GET", userServiceURL, nil)
+	if err != nil {
+		return types.UserInfoResponse{}, err
+	}
+	req.Header.Set("Cookie", cookie.String()) // Forward the session cookie
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return types.UserInfoResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	// Check response status code
+	if resp.StatusCode != http.StatusOK {
+		return types.UserInfoResponse{}, errors.New("failed to verify session or session not found")
+	}
+
+	// Decode the JSON response into a struct
+	var fullResponse types.FullResponseWithData
+	if err := json.NewDecoder(resp.Body).Decode(&fullResponse); err != nil {
+		return types.UserInfoResponse{}, err
+	}
+
+	// Convert the Data field from map to UserInfoResponse
+	dataMap, ok := fullResponse.Data.(map[string]interface{})
+	if !ok {
+		log.Println("Data type assertion to map failed")
+		return types.UserInfoResponse{}, fmt.Errorf("response data is not a map")
+	}
+
+	jsonData, err := json.Marshal(dataMap)
+	if err != nil {
+		log.Println("Error marshaling data map to JSON:", err)
+		return types.UserInfoResponse{}, err
+	}
+
+	var userInfo types.UserInfoResponse
+	if err := json.Unmarshal(jsonData, &userInfo); err != nil {
+		log.Println("Error unmarshaling JSON to UserInfoResponse:", err)
+		return types.UserInfoResponse{}, err
+	}
+
+	return userInfo, nil
 }

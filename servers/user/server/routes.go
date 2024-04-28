@@ -19,23 +19,32 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	store := config.InitSession()                // Initialize session store using config
 	r.Use(sessions.Sessions("givegetgo", store)) // Use sessions with the store
 
-	userUtils := utils.NewUserUtils(DB, redisClient)        // Set up user utils
-	rateLimiter := middleware.SetupRateLimiter(redisClient) // Setup Rate limiter
+	userUtils := utils.NewUserUtils(DB, redisClient) // Set up user utils
+	defaultRateLimiter := middleware.SetupRateLimiter(redisClient, "60-M")
+	sensitiveRateLimiter := middleware.SetupRateLimiter(redisClient, "10-M")
 
 	// Public routes - without auth middleware
 	unAuthGroup := r.Group("/v1")
-	unAuthGroup.Use(rateLimiter) // Apply rate limiter
+	unAuthGroup.Use(defaultRateLimiter)
 	{
-		unAuthGroup.GET("/user/health", sharedController.HealthCheckHandler())
-		unAuthGroup.POST("/user/register", controller.RegisterHandler(userUtils))
-		unAuthGroup.POST("/user/login", controller.LoginHandler(userUtils))
-		unAuthGroup.GET("/user/logout", controller.LogoutHandler(userUtils))
+		userUnAuthGroup := unAuthGroup.Group("")
+		{
+			userUnAuthGroup.GET("/user/health", sharedController.HealthCheckHandler())
+			userUnAuthGroup.GET("/user/logout", controller.LogoutHandler(userUtils))
+		}
+
+		sensitiveUnAuthGroup := unAuthGroup.Group("")
+		sensitiveUnAuthGroup.Use(sensitiveRateLimiter)
+		{
+			sensitiveUnAuthGroup.POST("/user/register", controller.RegisterHandler(userUtils))
+			sensitiveUnAuthGroup.POST("/user/login", controller.LoginHandler(userUtils))
+		}
 	}
 
 	// Public routes - with auth middleware
 	authGroup := r.Group("/v1")
+	authGroup.Use(defaultRateLimiter)
 	authGroup.Use(middleware.AuthMiddleware())
-	authGroup.Use(rateLimiter) // Apply rate limiter
 	{
 		userGroup := authGroup.Group("/user")
 		{
@@ -43,11 +52,17 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 			userGroup.GET("/verified", controller.VerifiedHandler(userUtils))
 			userGroup.GET("/me", controller.GetMeHandler(userUtils))
 			userGroup.PUT("/me", controller.EditMeHandler(userUtils))
-			userGroup.POST("/forgot-password", controller.ForgotPasswordHandler(userUtils))
-			userGroup.POST("/reset-password", controller.ResetPasswordHandler(userUtils))
+		}
+
+		sensitiveUserGroup := userGroup.Group("")
+		sensitiveUserGroup.Use(sensitiveRateLimiter)
+		{
+			sensitiveUserGroup.POST("/forgot-password", controller.ForgotPasswordHandler(userUtils))
+			sensitiveUserGroup.POST("/reset-password", controller.ResetPasswordHandler(userUtils))
 		}
 
 		mfaGroup := authGroup.Group("/mfa")
+		mfaGroup.Use(sensitiveRateLimiter)
 		{
 			mfaGroup.POST("", controller.VerifyMFAHandler(userUtils))
 			mfaGroup.GET("", controller.GetMFAHandler(userUtils))

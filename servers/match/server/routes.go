@@ -16,19 +16,31 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 
 	// Set up match utils
 	matchUtils := utils.NewMatchUtils(DB, redisClient)
+	defaultRateLimiter := middleware.SetupRateLimiter(redisClient, "60-M")
+	sensitiveRateLimiter := middleware.SetupRateLimiter(redisClient, "10-M")
 
 	// Public routes - without auth middleware
 	matchGroup := r.Group("/v1/match")
+	matchGroup.Use(defaultRateLimiter)
 	{
 		matchGroup.GET("/health", sharedController.HealthCheckHandler())
 	}
 
 	// Public routes - with auth middleware
 	matchAuthGroup := r.Group("/v1")
+	matchAuthGroup.Use(defaultRateLimiter)
 	matchAuthGroup.Use(middleware.AuthMiddleware())
 	{
-		matchGroup.POST("/match", controller.MatchHandler(matchUtils))
-		matchGroup.GET("/match/:id", controller.GetMatchHandler(matchUtils))
+		defaultMatchAuthGroup := matchAuthGroup.Group("")
+		{
+			defaultMatchAuthGroup.GET("/match/:id", controller.GetMatchHandler(matchUtils))
+		}
+
+		sensitiveMatchAuthGroup := matchAuthGroup.Group("")
+		sensitiveMatchAuthGroup.Use(sensitiveRateLimiter)
+		{
+			sensitiveMatchAuthGroup.POST("/match", controller.MatchHandler(matchUtils))
+		}
 	}
 
 	return r

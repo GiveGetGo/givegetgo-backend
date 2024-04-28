@@ -14,16 +14,15 @@ import (
 )
 
 // Public operations
-func GetNotificationByUserID(notificationUtils utils.INotificationUtils) gin.HandlerFunc {
+func GetNotification(notificationUtils utils.INotificationUtils) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userIDParam := c.Param("id")
-		userID, err := strconv.ParseUint(userIDParam, 10, 32)
+		user, err := notificationUtils.GetUserInfo(c)
 		if err != nil {
-			res.ResponseError(c, http.StatusBadRequest, types.InvalidRequest())
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
-		notifications, err := notificationUtils.GetNotificationByUserID(uint(userID))
+		notifications, err := notificationUtils.GetNotificationByUserID(user.UserID)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				res.ResponseError(c, http.StatusNotFound, types.RecordNotFound())
