@@ -32,8 +32,14 @@ func MatchHandler(matchUtils utils.IMatchUtils) gin.HandlerFunc {
 			return
 		}
 
+		post, err := matchUtils.GetPostByPostID(c, req.PostID)
+		if err != nil {
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			return
+		}
+
 		// create new match
-		_, err = matchUtils.CreateMatch(req.PostID, user.UserID, helperUserid)
+		_, err = matchUtils.CreateMatch(post.PostID, user.UserID, helperUserid)
 		if err != nil {
 			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
@@ -47,13 +53,13 @@ func MatchHandler(matchUtils utils.IMatchUtils) gin.HandlerFunc {
 		}
 
 		// Notify both post user and bid user
-		err = matchUtils.CreateNotification(user.UserID, types.NewMatch)
+		err = matchUtils.CreateNotification(user.UserID, types.NewMatch, post)
 		if err != nil {
 			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
 
-		err = matchUtils.CreateNotification(helperUserid, types.BidMatch)
+		err = matchUtils.CreateNotification(helperUserid, types.BidMatch, post)
 		if err != nil {
 			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return

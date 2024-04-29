@@ -6,6 +6,7 @@ import (
 	"notification/schema"
 	"notification/utils"
 	"strconv"
+	"time"
 
 	"github.com/GiveGetGo/shared/res"
 	"github.com/GiveGetGo/shared/types"
@@ -76,7 +77,9 @@ func CreateNewNotification(notificationUtils utils.INotificationUtils) gin.Handl
 
 		notification := schema.Notification{
 			UserID:           req.UserID,
+			Description:      req.Description,
 			NotificationType: req.NotificationType,
+			CreatedDate:      time.Now(),
 		}
 
 		_, err := notificationUtils.CreateNotification(notification)

@@ -25,7 +25,9 @@ type IMatchUtils interface {
 	DeleteMatch(matchID uint) error
 	GetHelperUserID(c *gin.Context, bidId uint) (uint, error)
 	GetUserInfo(c *gin.Context) (types.UserInfoResponse, error)
-	CreateNotification(userID uint, notificationType types.NotificationType) error
+	CreateNotification(userID uint, notificationType types.NotificationType, post schema.PostResponse) error
+	GetPostByPostID(c *gin.Context, postID uint) (schema.PostResponse, error)
+	FormatNotificationDescription(post schema.PostResponse) string
 }
 
 type MatchUtils struct {
@@ -228,10 +230,13 @@ func (mu *MatchUtils) UpdatePostStatus(postID uint, status schema.PostStatus) er
 	return nil
 }
 
-func (mu *MatchUtils) CreateNotification(userID uint, notificationType types.NotificationType) error {
+func (mu *MatchUtils) CreateNotification(userID uint, notificationType types.NotificationType, post schema.PostResponse) error {
+	description := mu.FormatNotificationDescription(post)
+
 	// Marshal the request body
 	notificationReqBody, err := json.Marshal(types.CreateNotificationRequest{
 		UserID:           userID,
+		Description:      description,
 		NotificationType: notificationType,
 	})
 	if err != nil {
@@ -264,4 +269,64 @@ func (mu *MatchUtils) CreateNotification(userID uint, notificationType types.Not
 	}
 
 	return nil
+}
+
+func (mu *MatchUtils) GetPostByPostID(c *gin.Context, postID uint) (schema.PostResponse, error) {
+	postServiceURL := os.Getenv("POST_SERVICE_URL") + fmt.Sprintf("/v1/post/%d", postID)
+
+	// Extract the session cookie from the incoming request
+	cookie, err := c.Request.Cookie("givegetgo")
+	if err != nil {
+		return schema.PostResponse{}, errors.New("session cookie is missing")
+	}
+
+	// Create a new request to the post service
+	req, err := http.NewRequest("GET", postServiceURL, nil)
+	if err != nil {
+		return schema.PostResponse{}, err
+	}
+	req.Header.Set("Cookie", cookie.String()) // Forward the session cookie
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return schema.PostResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	// Check response status code
+	if resp.StatusCode != http.StatusOK {
+		return schema.PostResponse{}, fmt.Errorf("failed to retrieve post or post not found, status code: %d", resp.StatusCode)
+	}
+
+	// Decode the JSON response into a struct
+	var fullResponse types.FullResponseWithData
+	if err := json.NewDecoder(resp.Body).Decode(&fullResponse); err != nil {
+		return schema.PostResponse{}, err
+	}
+
+	// Convert the Data field from map to PostResponse
+	dataMap, ok := fullResponse.Data.(map[string]interface{})
+	if !ok {
+		log.Println("Data type assertion to map failed")
+		return schema.PostResponse{}, fmt.Errorf("response data is not a map")
+	}
+
+	jsonData, err := json.Marshal(dataMap)
+	if err != nil {
+		log.Println("Error marshaling data map to JSON:", err)
+		return schema.PostResponse{}, err
+	}
+
+	var postResponse schema.PostResponse
+	if err := json.Unmarshal(jsonData, &postResponse); err != nil {
+		log.Println("Error unmarshaling JSON to PostResponse:", err)
+		return schema.PostResponse{}, err
+	}
+
+	return postResponse, nil
+}
+
+func (mu *MatchUtils) FormatNotificationDescription(post schema.PostResponse) string {
+	return fmt.Sprintf("Match succeeded with %s for \"%s\". Click in to rate this match!", post.Username, post.Title)
 }

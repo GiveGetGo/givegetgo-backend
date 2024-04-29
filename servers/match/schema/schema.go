@@ -41,3 +41,13 @@ type BidInfoResponse struct {
 	BidDescription string `json:"BidDescription"`
 	DateSubmitted  string `json:"DateSubmitted"`
 }
+
+type PostResponse struct {
+	PostID      uint       `json:"postID"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Category    string     `json:"category"`
+	Username    string     `json:"username"`
+	DatePosted  time.Time  `json:"date_posted"`
+	Status      PostStatus `json:"status"`
+}
