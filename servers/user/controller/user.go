@@ -406,7 +406,7 @@ func VerifiedHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		}
 
 		// Check if the user is already MFA verified
-		if user.MFAVerified {
+		if !user.MFAVerified {
 			res.ResponseError(c, http.StatusBadRequest, types.AlreadyVerified())
 			return
 		}
