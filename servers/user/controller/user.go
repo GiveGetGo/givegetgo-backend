@@ -2,7 +2,6 @@ package controller
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -89,7 +88,6 @@ func RegisterHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		session.Set("userid", user.UserID)
 		err = session.Save()
 		if err != nil {
-			log.Println("err is ", err)
 			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
 			return
 		}
@@ -109,8 +107,12 @@ func LoginHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 
 		// Check if the email is already registered
 		user, err := userUtils.GetUserByEmail(req.Email)
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				res.ResponseError(c, http.StatusNotFound, types.UserNotFound())
+			} else {
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			}
 			return
 		}
 
@@ -258,8 +260,11 @@ func SetUserEmailVerifiedHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 		// Update the user's email to verified
 		user, err := userUtils.GetUserByEmail(req.Email)
 		if err != nil {
-			log.Println(err)
-			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				res.ResponseError(c, http.StatusNotFound, types.UserNotFound())
+			} else {
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			}
 			return
 		}
 
@@ -336,6 +341,8 @@ func GetMeHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 			Email:         user.Email,
 			Class:         user.Class,
 			Major:         user.Major,
+			ProfileImage:  user.ProfileImage,
+			ProfileInfo:   user.ProfileInfo,
 			EmailVerified: user.EmailVerified,
 			MfaVerified:   user.MFAVerified,
 		}
@@ -374,6 +381,45 @@ func EditMeHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 	}
 }
 
+func DeleteUserHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		session := sessions.Default(c)
+		userIdValue := session.Get("userid")
+		if userIdValue == nil {
+			res.ResponseError(c, http.StatusUnauthorized, types.InvalidCredentials())
+			return
+		}
+
+		userId, ok := userIdValue.(uint)
+		if !ok {
+			res.ResponseError(c, http.StatusUnauthorized, types.InvalidCredentials())
+			return
+		}
+
+		// clear user session
+		session.Clear()
+		err := session.Save()
+		if err != nil {
+			res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+		}
+
+		// Call the DeleteUser method to attempt deleting the user
+		err = userUtils.DeleteUser(userId)
+		if err != nil {
+			// You might want to distinguish between different error types
+			if err.Error() == "no user found" {
+				res.ResponseError(c, http.StatusNotFound, types.UserNotFound())
+			} else {
+				res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+			}
+			return
+		}
+
+		// Return a success response if deletion is successful
+		res.ResponseSuccess(c, http.StatusOK, "User Deleted", types.Success())
+	}
+}
+
 func VerifiedHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		session := sessions.Default(c)
@@ -405,9 +451,9 @@ func VerifiedHandler(userUtils utils.IUserUtils) gin.HandlerFunc {
 			return
 		}
 
-		// Check if the user is already MFA verified
+		// Check if the user is MFA verified
 		if !user.MFAVerified {
-			res.ResponseError(c, http.StatusBadRequest, types.AlreadyVerified())
+			res.ResponseError(c, http.StatusBadRequest, types.MFANotVerified())
 			return
 		}
 

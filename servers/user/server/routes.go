@@ -52,6 +52,7 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 			userGroup.GET("/verified", controller.VerifiedHandler(userUtils))
 			userGroup.GET("/me", controller.GetMeHandler(userUtils))
 			userGroup.PUT("/me", controller.EditMeHandler(userUtils))
+			userGroup.DELETE("/me", controller.DeleteUserHandler(userUtils))
 		}
 
 		sensitiveUserGroup := userGroup.Group("")

@@ -16,6 +16,7 @@ type Database interface {
 	First(dest interface{}, conds ...interface{}) *gorm.DB
 	Save(value interface{}) *gorm.DB
 	Model(value interface{}) *gorm.DB
+	Delete(value interface{}, conds ...interface{}) *gorm.DB
 }
 
 // Ensure that *gorm.DB satisfies the Database interface

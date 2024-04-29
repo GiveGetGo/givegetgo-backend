@@ -35,6 +35,9 @@ type IUserUtils interface {
 	UpdateUser(userID uint, updates types.UserUpdateRequest) error
 	UpdatePassword(userID uint, hashedPassword string) error
 
+	// Delete
+	DeleteUser(userID uint) error
+
 	// Others
 	ValidatePassword(password string) error
 	HashPassword(password string) (string, error)
@@ -361,12 +364,24 @@ func (u *UserUtils) UpdatePassword(userID uint, hashedPassword string) error {
 
 func (u *UserUtils) UpdateUser(userID uint, updates types.UserUpdateRequest) error {
 	updateMap := map[string]interface{}{
-		"username":     updates.Username,
-		"class":        updates.Class,
-		"major":        updates.Major,
-		"profile_info": updates.ProfileInfo,
+		"username":      updates.Username,
+		"class":         updates.Class,
+		"major":         updates.Major,
+		"profile_image": updates.ProfileImage,
+		"profile_info":  updates.ProfileInfo,
 	}
 	return u.DB.Model(&schema.User{}).Where("user_id = ?", userID).Updates(updateMap).Error
+}
+
+func (u *UserUtils) DeleteUser(userID uint) error {
+	result := u.DB.Delete(&schema.User{}, userID)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("no user found")
+	}
+	return nil
 }
 
 func (u *UserUtils) GenerateAndSendQRCode(c *gin.Context, email string, secret []byte) {

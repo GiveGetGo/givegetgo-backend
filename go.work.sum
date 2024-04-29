@@ -7,8 +7,8 @@ cloud.google.com/go/longrunning v0.5.4/go.mod h1:zqNVncI0BOP8ST6XQD1+VcvuShMmq7+
 cloud.google.com/go/storage v1.35.1/go.mod h1:M6M/3V/D3KpzMTJyPOR/HU6n2Si5QdaXYEsng2xgOs8=
 github.com/GiveGetGo/shared v0.1.6 h1:GHqapsGNUjk6AdvH5JjND0Ng29cYN925LyEly7+iC18=
 github.com/GiveGetGo/shared v0.1.6/go.mod h1:9WF2GGC0wrCp7SDl3oeZ3crBP9KnHfMkNKesSxzkJVU=
-github.com/GiveGetGo/shared v0.2.13 h1:Sqfquruy1ok9Z6iTlflYqRead9sZOi3UvBdbzj0bHJ8=
-github.com/GiveGetGo/shared v0.2.13/go.mod h1:9WF2GGC0wrCp7SDl3oeZ3crBP9KnHfMkNKesSxzkJVU=
+github.com/GiveGetGo/shared v0.2.17 h1:lj26SKM4ni0c+KCSthvipoTzr38jF+3fHABs2ZmanGw=
+github.com/GiveGetGo/shared v0.2.17/go.mod h1:9WF2GGC0wrCp7SDl3oeZ3crBP9KnHfMkNKesSxzkJVU=
 github.com/andybalholm/brotli v1.0.5 h1:8uQZIdzKmjc/iuPu7O2ioW48L81FgatrcpfFmiq/cCs=
 github.com/andybalholm/brotli v1.0.5/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
 github.com/antonlindstrom/pgstore v0.0.0-20220421113606-e3a6e3fed12a/go.mod h1:Sdr/tmSOLEnncCuXS5TwZRxuk7deH1WXVY8cve3eVBM=
