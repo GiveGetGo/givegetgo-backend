@@ -5,12 +5,13 @@ import (
 )
 
 type User struct {
-	UserID          uint `gorm:"primaryKey"`
-	UserName        string
+	UserID          uint   `gorm:"primaryKey"`
+	UserName        string `gorm:"column:username"`
 	Email           string
 	HashedPassword  string
 	Class           string
 	Major           string
+	ProfileImage    string
 	ProfileInfo     string
 	ReputationScore int
 	EmailVerified   bool
@@ -18,14 +19,4 @@ type User struct {
 	MFASecret       string
 	DateJoined      time.Time
 	LastActiveDate  time.Time
-}
-
-type Notification struct {
-	NotificationID   uint   `gorm:"primaryKey"`
-	UserID           uint   `gorm:"index"`
-	NotificationType string `gorm:"type:enum('Bid', 'Match', 'Feedback');default:'Bid'"`
-	RelatedID        uint
-	Message          string
-	DateSent         time.Time
-	IsRead           bool
 }

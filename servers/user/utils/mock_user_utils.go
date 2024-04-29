@@ -9,6 +9,8 @@ import (
 	reflect "reflect"
 	schema "user/schema"
 
+	types "github.com/GiveGetGo/shared/types"
+	gin "github.com/gin-gonic/gin"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -64,18 +66,44 @@ func (mr *MockIUserUtilsMockRecorder) CheckEmailVerificationSession(ctx, userID,
 }
 
 // CreateUser mocks base method.
-func (m *MockIUserUtils) CreateUser(username, email, hashedPassword string) (schema.User, error) {
+func (m *MockIUserUtils) CreateUser(username, email, hashedPassword, class, major string) (schema.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateUser", username, email, hashedPassword)
+	ret := m.ctrl.Call(m, "CreateUser", username, email, hashedPassword, class, major)
 	ret0, _ := ret[0].(schema.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateUser indicates an expected call of CreateUser.
-func (mr *MockIUserUtilsMockRecorder) CreateUser(username, email, hashedPassword interface{}) *gomock.Call {
+func (mr *MockIUserUtilsMockRecorder) CreateUser(username, email, hashedPassword, class, major interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockIUserUtils)(nil).CreateUser), username, email, hashedPassword)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockIUserUtils)(nil).CreateUser), username, email, hashedPassword, class, major)
+}
+
+// DeleteUser mocks base method.
+func (m *MockIUserUtils) DeleteUser(userID uint) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteUser", userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteUser indicates an expected call of DeleteUser.
+func (mr *MockIUserUtilsMockRecorder) DeleteUser(userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUser", reflect.TypeOf((*MockIUserUtils)(nil).DeleteUser), userID)
+}
+
+// GenerateAndSendQRCode mocks base method.
+func (m *MockIUserUtils) GenerateAndSendQRCode(c *gin.Context, email string, secret []byte) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "GenerateAndSendQRCode", c, email, secret)
+}
+
+// GenerateAndSendQRCode indicates an expected call of GenerateAndSendQRCode.
+func (mr *MockIUserUtilsMockRecorder) GenerateAndSendQRCode(c, email, secret interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateAndSendQRCode", reflect.TypeOf((*MockIUserUtils)(nil).GenerateAndSendQRCode), c, email, secret)
 }
 
 // GetUserByEmail mocks base method.
@@ -194,18 +222,31 @@ func (mr *MockIUserUtilsMockRecorder) StoreEncryptedTOTPSecret(userID, encrypted
 }
 
 // UpdatePassword mocks base method.
-func (m *MockIUserUtils) UpdatePassword(userID uint, hashedPassword string) (schema.User, error) {
+func (m *MockIUserUtils) UpdatePassword(userID uint, hashedPassword string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdatePassword", userID, hashedPassword)
-	ret0, _ := ret[0].(schema.User)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // UpdatePassword indicates an expected call of UpdatePassword.
 func (mr *MockIUserUtilsMockRecorder) UpdatePassword(userID, hashedPassword interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePassword", reflect.TypeOf((*MockIUserUtils)(nil).UpdatePassword), userID, hashedPassword)
+}
+
+// UpdateUser mocks base method.
+func (m *MockIUserUtils) UpdateUser(userID uint, updates types.UserUpdateRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateUser", userID, updates)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateUser indicates an expected call of UpdateUser.
+func (mr *MockIUserUtilsMockRecorder) UpdateUser(userID, updates interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUser", reflect.TypeOf((*MockIUserUtils)(nil).UpdateUser), userID, updates)
 }
 
 // ValidatePassword mocks base method.
