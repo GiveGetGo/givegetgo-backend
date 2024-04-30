@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-match-database-access
+spec:
+  podSelector:
+    matchLabels:
+        app.kubernetes.io/name: match
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+                app.kubernetes.io/name: match-postgres
+      ports:
+        - protocol: TCP
+          port: 5432

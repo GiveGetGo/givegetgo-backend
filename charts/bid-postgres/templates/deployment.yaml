@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "bid-postgres.fullname" . }}
+  labels:
+    {{- include "bid-postgres.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "bid-postgres.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "bid-postgres.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: postgres
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bid-postgres.fullname" . }}-secret
+                  key: BID_POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bid-postgres.fullname" . }}-secret
+                  key: BID_POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bid-postgres.fullname" . }}-secret
+                  key: BID_POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/bid/pgdata
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: bid-postgres-storage
+      volumes:
+        - name: bid-postgres-storage
+          persistentVolumeClaim:
+            claimName: {{ include "bid-postgres.fullname" . }}-pvc

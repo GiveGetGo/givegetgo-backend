@@ -14,15 +14,31 @@ import (
 	"user/middleware"
 	"user/schema"
 
+	"github.com/GiveGetGo/shared/res"
+	"github.com/GiveGetGo/shared/types"
+	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"github.com/skip2/go-qrcode"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // IUserUtils is the interface for the user utils for mocking
 type IUserUtils interface {
+	// Create
+	CreateUser(username, email, hashedPassword string, class string, major string) (schema.User, error)
+
+	// Get info
 	GetUserByID(userID uint) (schema.User, error)
 	GetUserByEmail(email string) (schema.User, error)
-	CreateUser(username, email, hashedPassword string) (schema.User, error)
+
+	// Update
+	UpdateUser(userID uint, updates types.UserUpdateRequest) error
+	UpdatePassword(userID uint, hashedPassword string) error
+
+	// Delete
+	DeleteUser(userID uint) error
+
+	// Others
 	ValidatePassword(password string) error
 	HashPassword(password string) (string, error)
 	AuthenticateUser(user schema.User, password string) bool
@@ -32,7 +48,7 @@ type IUserUtils interface {
 	MarkMFAVerified(userID uint) error
 	StoreEncryptedTOTPSecret(userID uint, encryptedSecret string) error
 	CheckEmailVerificationSession(ctx context.Context, userID uint, event string) error
-	UpdatePassword(userID uint, hashedPassword string) error
+	GenerateAndSendQRCode(c *gin.Context, email string, secret []byte)
 }
 
 type UserUtils struct {
@@ -74,12 +90,14 @@ func (u *UserUtils) GetUserByEmail(email string) (schema.User, error) {
 }
 
 // CreateUser creates a user
-func (u *UserUtils) CreateUser(username, email, hashedPassword string) (schema.User, error) {
+func (u *UserUtils) CreateUser(username, email, hashedPassword string, class string, major string) (schema.User, error) {
 	// create the user
 	user := schema.User{
 		UserName:       username,
 		Email:          email,
 		HashedPassword: hashedPassword,
+		Class:          class,
+		Major:          major,
 	}
 	err := u.DB.Create(&user).Error
 	if err != nil {
@@ -190,6 +208,11 @@ func (u *UserUtils) RequestRegisterVerificationEmail(userID uint, username strin
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusConflict {
+		log.Println("A recent verification code already exists, no new code sent.")
+		return nil
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		log.Println("verification service responded with status: ", resp.StatusCode)
 		// Handle non-OK responses here
@@ -240,6 +263,11 @@ func (u *UserUtils) RequestForgetpassVerificationEmail(userID uint, username str
 		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusConflict {
+		log.Println("A recent verification code already exists, no new code sent.")
+		return nil
+	}
 
 	// Check the response status
 	if resp.StatusCode != http.StatusOK {
@@ -332,4 +360,36 @@ func (u *UserUtils) UpdatePassword(userID uint, hashedPassword string) error {
 
 	// Return the updated user object and nil for the error
 	return nil
+}
+
+func (u *UserUtils) UpdateUser(userID uint, updates types.UserUpdateRequest) error {
+	updateMap := map[string]interface{}{
+		"username":      updates.Username,
+		"class":         updates.Class,
+		"major":         updates.Major,
+		"profile_image": updates.ProfileImage,
+		"profile_info":  updates.ProfileInfo,
+	}
+	return u.DB.Model(&schema.User{}).Where("user_id = ?", userID).Updates(updateMap).Error
+}
+
+func (u *UserUtils) DeleteUser(userID uint) error {
+	result := u.DB.Delete(&schema.User{}, userID)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("no user found")
+	}
+	return nil
+}
+
+func (u *UserUtils) GenerateAndSendQRCode(c *gin.Context, email string, secret []byte) {
+	uri := fmt.Sprintf("otpauth://totp/GiveGetGo:%s?secret=%s&issuer=GiveGetGo", email, string(secret))
+	qrCode, err := qrcode.Encode(uri, qrcode.Medium, 256)
+	if err != nil {
+		res.ResponseError(c, http.StatusInternalServerError, types.InternalServerError())
+		return
+	}
+	c.Data(http.StatusOK, "image/png", qrCode)
 }

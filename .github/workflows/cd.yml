@@ -1,4 +1,4 @@
-name: GiveGetGo CD Workflow
+name: GiveGetGo CD
 
 on:
   push:
@@ -6,15 +6,129 @@ on:
       - main
 
 jobs:
-  deploy:
+  # Check secrets changes
+  check-secrets-changes:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    outputs:
+      secrets-changed: ${{ steps.secrets-version-check.outputs.secrets-changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all commits to get the previous commit
+  
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }} 
+
+      - name: Check for secrets version changes
+        id: secrets-version-check
+        run: |
+          current_version=$(kubectl get configmap givegetgo-secrets-version -o=jsonpath='{.data.version}')
+          echo "Current EKS secrets version: $current_version"
+          echo "Secrets version from GitHub: ${{ secrets.SECRETS_VERSION }}"
+          if [ "$current_version" != "${{ secrets.SECRETS_VERSION }}" ]; then
+            echo "secrets-changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "secrets-changed=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Check code changes
+  check-code-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      nginx-changed: ${{ steps.check-changes.outputs.nginx-changed }}
+      user-changed: ${{ steps.check-changes.outputs.user-changed }}
+      verification-changed: ${{ steps.check-changes.outputs.verification-changed }}
+      post-changed: ${{ steps.check-changes.outputs.post-changed }}
+      bid-changed: ${{ steps.check-changes.outputs.bid-changed }}
+      match-changed: ${{ steps.check-changes.outputs.match-changed }}
+      notification-changed: ${{ steps.check-changes.outputs.notification-changed }}
+      redis-changed: ${{ steps.check-changes.outputs.redis-changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all commits to get the previous commit
+
+      - name: Check for code changes
+        id: check-changes
+        run: |
+          # Get the previous commit on the main branch
+          prev_commit=$(git rev-parse main^1)
+          
+          # Check if there are any changes in specific files/directories
+          nginx_changed=$(git diff --quiet $prev_commit HEAD -- ./nginx || echo 'true')
+          user_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/user || echo 'true')
+          verification_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/verification || echo 'true')
+          post_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/post || echo 'true')
+          bid_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/bid || echo 'true')
+          match_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/match || echo 'true')
+          notification_changed=$(git diff --quiet $prev_commit HEAD -- ./servers/notification || echo 'true')
+          redis_changed=$(git diff --quiet $prev_commit HEAD -- ./redis || echo 'true')
+          
+          # Output the results as step outputs
+          echo "nginx-changed=$nginx_changed" >> $GITHUB_OUTPUT
+          echo "user-changed=$user_changed" >> $GITHUB_OUTPUT
+          echo "verification-changed=$verification_changed" >> $GITHUB_OUTPUT
+          echo "post-changed=$post_changed" >> $GITHUB_OUTPUT
+          echo "bid-changed=$bid_changed" >> $GITHUB_OUTPUT
+          echo "match-changed=$match_changed" >> $GITHUB_OUTPUT
+          echo "notification-changed=$notification_changed" >> $GITHUB_OUTPUT
+          echo "redis-changed=$redis_changed" >> $GITHUB_OUTPUT
+
+  # Build and push Docker images to ECR
+  deploy-images-ecr:
+    runs-on: ubuntu-latest
+    needs: [check-code-changes, check-secrets-changes]
+    if: |
+      github.ref == 'refs/heads/main' &&
+      (
+        needs.check-code-changes.outputs.nginx-changed == 'true' ||
+        needs.check-code-changes.outputs.user-changed == 'true' ||
+        needs.check-code-changes.outputs.verification-changed == 'true' ||
+        needs.check-code-changes.outputs.post-changed == 'true' ||
+        needs.check-code-changes.outputs.bid-changed == 'true' ||
+        needs.check-code-changes.outputs.match-changed == 'true' ||
+        needs.check-code-changes.outputs.notification-changed == 'true' ||
+        needs.check-code-changes.outputs.redis-changed == 'true' ||
+        needs.check-secrets-changes.outputs.secrets-changed == 'true'
+      )
+    env:
+      ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+      NGINX_REPO_NAME: ${{ secrets.AWS_ECR_NGINX_REPO }}
+      GIVEGETGO_REPO_NAME: ${{ secrets.AWS_ECR_GIVEGETGO_REPO }}
+      NGINX_CHANGED: ${{ needs.check-code-changes.outputs.nginx-changed }}
+      REDIS_CHANGED: ${{ needs.check-code-changes.outputs.redis-changed }}
+      USER_CHANGED: ${{ needs.check-code-changes.outputs.user-changed }}
+      VERIFICATION_CHANGED: ${{ needs.check-code-changes.outputs.verification-changed }}
+      POST_CHANGED: ${{ needs.check-code-changes.outputs.post-changed }}
+      BID_CHANGED: ${{ needs.check-code-changes.outputs.bid-changed }}
+      MATCH_CHANGED: ${{ needs.check-code-changes.outputs.match-changed }}
+      NOTIFICATION_CHANGED: ${{ needs.check-code-changes.outputs.notification-changed }}
+      SECRETS_CHANGED: ${{ needs.check-secrets-changes.outputs.secrets-changed }}
+    outputs:
+      image-tag: ${{ steps.generate-image-tag.outputs.image_tag }}
     steps:
       # Checkout the repository
       - name: Checkout
         uses: actions/checkout@v4
+      
+      # Generate image tag
+      - name: Generate image tag
+        id: generate-image-tag 
+        run: |
+          image_tag=$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)
+          echo "IMAGE_TAG=$image_tag" >> $GITHUB_ENV
+          echo "image_tag=$image_tag" >> $GITHUB_OUTPUT
 
-      # Setup for deployment, e.g., configure AWS credentials
+      # Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -34,191 +148,212 @@ jobs:
       #     echo "::set-output name=user_service_changed::$(git diff --name-only ${{ github.sha }} ${{ github.event.before }} | grep -q 'servers/user' && echo 'true' || echo 'false')"
       #     echo "::set-output name=verification_service_changed::$(git diff --name-only ${{ github.sha }} ${{ github.event.before }} | grep -q 'servers/verification' && echo 'true' || echo 'false')"
 
-      # Set up Docker environment variables
-      - name: Set up Docker environment variables
+      - name: Generate environment files for Docker Compose
         run: |
-          echo "ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com" >> $GITHUB_ENV
-          echo "NGINX_REPO_NAME=${{ secrets.AWS_ECR_NGINX_REPO }}" >> $GITHUB_ENV
-          echo "GIVEGETGO_REPO_NAME=${{ secrets.AWS_ECR_GIVEGETGO_REPO }}" >> $GITHUB_ENV
-          echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)-$(date +%Y%m%d%H%M)" >> $GITHUB_ENV"
+          echo "${{ secrets.REDIS_ENV }}" | base64 -d > "./redis/.env.redis"
 
-      # Build and push nginx:
-      - name: Build and push nginx
-        run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          docker build -t $ECR_REGISTRY/$NGINX_REPO_NAME:$IMAGE_TAG ./nginx
-          docker push $ECR_REGISTRY/$NGINX_REPO_NAME:$IMAGE_TAG
-
-      # Create .env files
-      - name: Create .env files
-        run: |
-          echo "${{ secrets.USER_ENV_CONTENTS }}" > ./servers/user/.env.user
-          echo "${{ secrets.VERIFICATION_ENV_CONTENTS }}" > ./servers/verification/.env.verification
-
-      # Create .env files
-      - name: Create .env files
-        run: |
-          echo "${{ secrets.USER_ENV_CONTENTS }}" > ./servers/user/.env.user
-          echo "${{ secrets.VERIFICATION_ENV_CONTENTS }}" > ./servers/verification/.env.verification
-
-      # Build and push user-service
-      - name: Build and push user-service
-        run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:$user-IMAGE_TAG ./servers/user
-          docker push $ECR_REGISTRY/GIVEGETGO_REPO_NAME:user-$IMAGE_TAG
-
-      # Build and push verification-service
-      - name: Build and push verification-service
-        run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:verification-$IMAGE_TAG ./servers/verification
-          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:verification-$IMAGE_TAG
+          services=("user" "verification" "post" "bid" "match" "notification")
+          for service in "${services[@]}"; do
+            # Construct the name of the environment variable
+            service_env_var_name="${service^^}_SERVICE_ENV"
         
-      # Build and push post-service
-      - name: Build and push post-service
-        run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:post-$IMAGE_TAG ./servers/post
-          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:post-$IMAGE_TAG
-      
-      # Build and push match-service
-      - name: Build and push match-service
-        run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:$IMAGE_TAG ./servers/match
-          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:match$IMAGE_TAG
-
-      # Build and push bid-service
-      - name: Build and push bid-service
-        run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:bid-$IMAGE_TAG ./servers/bid
-          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:bid-$IMAGE_TAG
-
-      # Build and push redis
-      - name: Build and push redis
-        run: |
-          ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          docker build -t $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:redis-$IMAGE_TAG ./servers/redis
-          docker push $ECR_REGISTRY/$GIVEGETGO_REPO_NAME:redis-$IMAGE_TAG
-
-      # Update Helm chart repo and tag
-      - name: Update nginx Helm chart
-        run: |
-          helm upgrade --install nginx /charts/nginx \
-            --set image.repository=$ECR_REGISTRY/$NGINX_REPO_NAME \
-            --set image.tag=$IMAGE_TAG
-
-      - name: Update user Helm chart
-        run: |
-          helm upgrade --install user /charts/user \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=user-$IMAGE_TAG
-
-      - name: Update verification Helm chart
-        run: |
-          helm upgrade --install verification /charts/verification \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=verification-$IMAGE_TAG
-
-      - name: Update post Helm chart
-        run: |
-          helm upgrade --install post /charts/post \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=post-$IMAGE_TAG
-
-      - name: Update bid Helm chart
-        run: |
-          helm upgrade --install bid /charts/bid \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=bid-$IMAGE_TAG
+            # Use the variable names to retrieve the secret values directly from the environment
+            service_secret="${!service_env_var_name}"
         
-      - name: Update match Helm chart
+            # Decode the environment variable and write to a file
+            echo "$service_secret" | base64 -d > "./servers/$service/.env"
+          done
+        env:
+          USER_SERVICE_ENV: ${{ secrets.USER_SERVICE_ENV }}
+          VERIFICATION_SERVICE_ENV: ${{ secrets.VERIFICATION_SERVICE_ENV }}
+          POST_SERVICE_ENV: ${{ secrets.POST_SERVICE_ENV }}
+          BID_SERVICE_ENV: ${{ secrets.BID_SERVICE_ENV }}
+          MATCH_SERVICE_ENV: ${{ secrets.MATCH_SERVICE_ENV }}
+          NOTIFICATION_SERVICE_ENV: ${{ secrets.NOTIFICATION_SERVICE_ENV }}
+     
+      # Build and push Docker images
+      - name: Build and push Docker images
         run: |
-          helm upgrade --install match /charts/match \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=match-$IMAGE_TAG
+          declare -a services=("nginx" "user" "verification" "post" "bid" "match" "notification" "redis")
 
-      # Update Helm chart repo and tag for the each postgres service
-      - name: Update user-postgres Helm chart
-        run: |
-          helm upgrade --install user-postgres /charts/user/charts/user-postgres \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=user-postgres-$IMAGE_TAG
-          
-      - name: Update verification-postgres Helm chart
-        run: |
-          helm upgrade --install verification-postgres /charts/verification/charts/verification-postgres \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=verification-postgres-$IMAGE_TAG
-        
-      - name: Update post-postgres Helm chart
-        run: |
-          helm upgrade --install post-postgres /charts/post/charts/post-postgres \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=post-postgres-$IMAGE_TAG
-      
-      - name: Update bid-postgres Helm chart
-        run: |
-          helm upgrade --install bid-postgres /charts/bid/charts/bid-postgres \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=bid-postgres-$IMAGE_TAG
+          for service in "${services[@]}"; do
+            SERVICE_UPPER=$(echo "$service" | tr '[:lower:]' '[:upper:]')
+            SERVICE_CHANGED_VAR="${SERVICE_UPPER}_CHANGED"
+            if [ "${!SERVICE_CHANGED_VAR}" == "true" ] || [ "$SECRET_CHANGED" = "true" ]; then
+              if [ "$service" == "nginx" ]; then
+                image_tag="dev-nginx-$IMAGE_TAG"
+                path="./nginx"
+                repo_name=$NGINX_REPO_NAME
+              elif [ "$service" == "redis" ]; then
+                image_tag="dev-redis-$IMAGE_TAG"
+                path="./redis"
+                repo_name=$GIVEGETGO_REPO_NAME
+              else
+                image_tag="dev-${service}-$IMAGE_TAG"
+                path="./servers/$service"
+                repo_name=$GIVEGETGO_REPO_NAME
+              fi
 
-      - name: Update match-postgres Helm chart
-        run: |
-          helm upgrade --install match-postgres /charts/match/charts/match-postgres \
-            --set image.repository=$ECR_REGISTRY/$GIVEGETGO_REPO_NAME \
-            --set image.tag=match-postgres-$IMAGE_TAG
+              docker build -t $ECR_REGISTRY/$repo_name:$image_tag $path
+              docker push $ECR_REGISTRY/$repo_name:$image_tag
+            fi
+          done
+        shell: bash
+              
 
-      # Update EKS kube config
+  # Create Kubernetes secrets for all services
+  create-eks-secrets:
+    runs-on: ubuntu-latest
+    needs: [check-secrets-changes]
+    if: github.ref == 'refs/heads/development' && needs.check-secrets-changes.outputs.secrets-changed == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Update EKS config
         run: |
           aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_NAME }}
 
-      # Update postgres credentials for each service and redis
-      - name: Update user-postgres credentials
+
+      - name: Decode and create secrets for all services and their PostgreSQL
+        env:
+          USER_POSTGRES_ENV: ${{ secrets.USER_POSTGRES_ENV }}
+          VERIFICATION_POSTGRES_ENV: ${{ secrets.VERIFICATION_POSTGRES_ENV }}
+          POST_POSTGRES_ENV: ${{ secrets.POST_POSTGRES_ENV }}
+          BID_POSTGRES_ENV: ${{ secrets.BID_POSTGRES_ENV }}
+          MATCH_POSTGRES_ENV: ${{ secrets.MATCH_POSTGRES_ENV }}
+          NOTIFICATION_POSTGRES_ENV: ${{ secrets.NOTIFICATION_POSTGRES_ENV }}
         run: |
-          kubectl create secret generic user-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_USER_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_USER_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_USER_POSTGRES_PASSWORD }} \
-            --namespace=${{ secrets.AWS_EKS_USER_POSTGRES_NAMESPACE }} \
+          services=("user" "verification" "post" "bid" "match")
+          namespace="givegetgo-development"
+          
+          for service in "${services[@]}"; do
+              postgres_env_var_name="${service^^}_POSTGRES_ENV"
+            
+              postgres_secret=$(printenv $postgres_env_var_name)
+            
+              echo "$postgres_secret" | base64 -d > "./$service-postgres.env"
+              
+              if kubectl get secret givegetgo-${service}-postgres-secret -n $namespace &> /dev/null; then
+                  # Secret exists, check if it needs to be updated
+                  existing_secret=$(kubectl get secret givegetgo-${service}-postgres-secret -n $namespace -o jsonpath='{.data}')
+                  
+                  new_secret=$(cat ./$service-postgres.env | base64)
+                  
+                  if [ "$existing_secret" != "$new_secret" ]; then
+                      echo "Updating existing secret givegetgo-${service}-postgres-secret because the content has changed."
+                      kubectl create secret generic givegetgo-${service}-postgres-secret --from-env-file=./$service-postgres.env --namespace $namespace --dry-run=client -o yaml | kubectl apply -f -
+                  else
+                      echo "Secret givegetgo-${service}-postgres-secret is up to date. No changes needed."
+                  fi
+              else
+                  # Secret does not exist, create it
+                  echo "Creating secret givegetgo-${service}-postgres-secret."
+                  kubectl create secret generic givegetgo-${service}-postgres-secret --from-env-file=./$service-postgres.env --namespace $namespace
+              fi
+          done
+        shell: bash
+    
+      # Create or update the ConfigMap with the current secrets version
+      - name: Update ConfigMap with secrets version
+        run: |
+          # This command creates or updates a ConfigMap named 'givegetgo-secrets-version'
+          kubectl create configmap givegetgo-secrets-version \
+            --from-literal=version=${{ secrets.SECRETS_VERSION }} \
+            --namespace givegetgo-development \
             --dry-run=client -o yaml | kubectl apply -f -
+
+  # Update ArgoCD applications
+  update-argocd-apps:
+    runs-on: ubuntu-latest
+    needs: [deploy-images-ecr, create-eks-secrets, check-code-changes, check-secrets-changes]
+    if: |
+      github.ref == 'refs/heads/main' &&
+      (
+        needs.check-code-changes.outputs.nginx-changed == 'true' ||
+        needs.check-code-changes.outputs.user-changed == 'true' ||
+        needs.check-code-changes.outputs.verification-changed == 'true' ||
+        needs.check-code-changes.outputs.post-changed == 'true' ||
+        needs.check-code-changes.outputs.bid-changed == 'true' ||
+        needs.check-code-changes.outputs.match-changed == 'true' ||
+        needs.check-code-changes.outputs.notification-changed == 'true' ||
+        needs.check-code-changes.outputs.redis-changed == 'true' ||
+        needs.check-secrets-changes.outputs.secrets-changed == 'true'
+      )
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       
-      - name: Update verification-postgres credentials
+      # Install ArgoCD CLI
+      - name: Install ArgoCD CLI
         run: |
-          kubectl create secret generic verification-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_PASSWORD }} \
-            --namespace=${{ secrets.AWS_EKS_VERIFICATION_POSTGRES_NAMESPACE }} \
-            --dry-run=client -o yaml | kubectl apply -f -
-      
-      - name: Update post-postgres credentials
+          curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+          rm argocd-linux-amd64 
+
+      # Patch ArgoCD application to deploy the latest images
+      - name: Patch ArgoCD application
         run: |
-          kubectl create secret generic post-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_POST_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_POST_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_POST_POSTGRES_PASSWORD}} \
-            --namespace=${{ secrets.AWS_EKS_BID_POSTGRES_NAMESPACE }} \
-            --dry-run=client -o yaml | kubectl apply -f -
-      
-      - name: Update bid-postgres credentials
+          argocd login ${{ secrets.ARGOCD_SERVER }} --username ${{ secrets.ARGOCD_ADMIN }} --password ${{ secrets.ARGOCD_PASSWORD }} --insecure
+
+      # Update ArgoCD applications with new image repo and tag
+      - name: Update ArgoCD applications with new image repo and tag
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          NGINX_REPO_NAME: ${{ secrets.AWS_ECR_NGINX_REPO }}
+          GIVEGETGO_REPO_NAME: ${{ secrets.AWS_ECR_GIVEGETGO_REPO }}
+          IMAGE_TAG: ${{ needs.deploy-images-ecr.outputs.image-tag }}
+          POSTGRES_IMAGE_REPO: docker.io/postgres
+          POSTGRES_IMAGE_TAG: latest
+          NGINX_CHANGED: ${{ needs.check-code-changes.outputs.nginx-changed }}
+          REDIS_CHANGED: ${{ needs.check-code-changes.outputs.redis-changed }}
+          USER_CHANGED: ${{ needs.check-code-changes.outputs.user-changed }}
+          VERIFICATION_CHANGED: ${{ needs.check-code-changes.outputs.verification-changed }}
+          POST_CHANGED: ${{ needs.check-code-changes.outputs.post-changed }}
+          BID_CHANGED: ${{ needs.check-code-changes.outputs.bid-changed }}
+          MATCH_CHANGED: ${{ needs.check-code-changes.outputs.match-changed }}
+          NOTIFICATION_CHANGED: ${{ needs.check-code-changes.outputs.notification-changed }}
+          SECRETS_CHANGED: ${{ needs.check-secrets-changes.outputs.secrets-changed }}
         run: |
-          kubectl create secret generic bid-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_BID_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_BID_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_BID_POSTGRES_PASSWORD }} \
-            --namespace=${{ secrets.AWS_EKS_BID_POSTGRES_NAMESPACE}} \
-            --dry-run=client -o yaml | kubectl apply -f -
-        
-      - name: Update match-postgres credentials
-        run: |
-          kubectl create secret generic match-postgres-credentials \
-            --from-literal=postgres-db=${{ secrets.AWS_EKS_MATCH_POSTGRES_DB }} \
-            --from-literal=postgres-user=${{ secrets.AWS_EKS_MATCH_POSTGRES_USER }} \
-            --from-literal=postgres-password=${{ secrets.AWS_EKS_MATCH_POSTGRES_PASSWORD }} \
-            --namespace=${{ secrets.AWS_EKS_MATCH_POSTGRES_NAMESPACE }} \
-            --dry-run=client -o yaml | kubectl apply -f -
-      
+          if [ "$NGINX_CHANGED" == "true" ] || [ "$SECRET_CHANGED" = "true" ]; then
+            argocd app set givegetgo-backend-nginx \
+              --helm-set image.repository="$ECR_REGISTRY/$NGINX_REPO_NAME" \
+              --helm-set image.tag="nginx-$IMAGE_TAG"
+          fi
+
+          if [ "$REDIS_CHANGED" == "true" ] || [ "$SECRET_CHANGED" = "true" ]; then
+            argocd app set givegetgo-backend-redis \
+              --helm-set image.repository="$ECR_REGISTRY/$GIVEGETGO_REPO_NAME" \
+              --helm-set image.tag="redis-$IMAGE_TAG"
+          fi
+
+          for service in user verification post bid match notification; do
+            SERVICE_CHANGED="${service^^}_CHANGED"
+            if [ "${!SERVICE_CHANGED}" == "true" ] || [ "$SECRET_CHANGED" = "true" ]; then
+              # Construct the image repo and tag for the service
+              APP_NAME="givegetgo-$service-backend"
+              SERVICE_IMAGE_REPO="$ECR_REGISTRY/$GIVEGETGO_REPO_NAME"
+              SERVICE_IMAGE_TAG="${service}-$IMAGE_TAG"
+
+              # Update the application in Argo CD
+              argocd app set $APP_NAME \
+                --helm-set image.repository="$SERVICE_IMAGE_REPO" \
+                --helm-set image.tag="$SERVICE_IMAGE_TAG"
+            fi
+          done
+
+          for service in user-postgres post-postgres verification-postgres bid-postgres match-postgres notification-postgres; do
+            APP_NAME="givegetgo-$service"
+            argocd app set $APP_NAME \
+              --helm-set image.repository="$POSTGRES_IMAGE_REPO" \
+              --helm-set image.tag="$POSTGRES_IMAGE_TAG"
+          done
+        shell: bash

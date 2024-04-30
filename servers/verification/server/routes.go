@@ -5,6 +5,7 @@ import (
 	"verification/middleware"
 	"verification/utils"
 
+	sharedController "github.com/GiveGetGo/shared/controller"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -15,12 +16,21 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 
 	// Set up verification utils
 	verificationUtils := utils.NewVerificationUtils(DB, redisClient)
+	defaultRateLimiter := middleware.SetupRateLimiter(redisClient, "60-M")
+	sensitiveRateLimiter := middleware.SetupRateLimiter(redisClient, "10-M")
 
 	// Public routes - without auth middleware
+	unAuthGroup := r.Group("/v1")
+	unAuthGroup.Use(defaultRateLimiter)
+	{
+		unAuthGroup.GET("/verification/health", sharedController.HealthCheckHandler())
+	}
 
 	// Public routes - with auth middleware
 	verificationAuthGroup := r.Group("/v1/verification")
-	// TODO: Add auth middleware
+	verificationAuthGroup.Use(defaultRateLimiter)
+	verificationAuthGroup.Use(middleware.AuthMiddleware())
+	verificationAuthGroup.Use(sensitiveRateLimiter)
 	{
 		verificationAuthGroup.POST("/verify-email", controller.VerifyEmailVerificationHandler(verificationUtils))
 	}

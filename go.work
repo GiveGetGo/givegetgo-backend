@@ -6,4 +6,5 @@ use (
     ./servers/post
     ./servers/bid
     ./servers/match
+    ./servers/notification
 )

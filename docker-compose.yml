@@ -1,21 +1,22 @@
-version: '3.8'
 services:
   nginx:
+    container_name: givegetgo-backend-nginx
     build:
       context: ./nginx
     ports:
-      - "80:80"
+      - "8080:80"
     restart: unless-stopped
     networks:
       - givegetgo-network
     depends_on:
-      - user-service
-      - verification-service
-      - post-service
-      - bid-service
-      - match-service
+      - givegetgo-user-backend
+      - givegetgo-verification-backend
+      - givegetgo-post-backend
+      - givegetgo-bid-backend
+      - givegetgo-match-backend
 
-  user-service:
+  givegetgo-user-backend:
+    container_name: givegetgo-user-backend
     build:
       context: ./servers/user
     env_file:
@@ -25,9 +26,10 @@ services:
       - givegetgo-network
     depends_on:
       - user-postgres
-      - redis
+      - givegetgo-redis
 
-  verification-service:
+  givegetgo-verification-backend:
+    container_name: givegetgo-verification-backend
     build:
       context: ./servers/verification
     env_file:
@@ -37,9 +39,10 @@ services:
       - givegetgo-network
     depends_on:
       - verification-postgres
-      - redis
+      - givegetgo-redis
 
-  post-service:
+  givegetgo-post-backend:
+    container_name: givegetgo-post-backend
     build:
       context: ./servers/post
     env_file:
@@ -49,9 +52,10 @@ services:
       - givegetgo-network
     depends_on:
       - post-postgres
-      - redis
+      - givegetgo-redis
 
-  bid-service:
+  givegetgo-bid-backend:
+    container_name: givegetgo-bid-backend
     build:
       context: ./servers/bid
     env_file:
@@ -61,9 +65,10 @@ services:
       - givegetgo-network
     depends_on:
       - bid-postgres
-      - redis
+      - givegetgo-redis
   
-  match-service:
+  givegetgo-match-backend:
+    container_name: givegetgo-match-backend
     build:
       context: ./servers/match
     env_file:
@@ -73,11 +78,24 @@ services:
       - givegetgo-network
     depends_on:
       - match-postgres
-      - redis
+      - givegetgo-redis
+    
+  givegetgo-notification-backend:
+    container_name: givegetgo-notification-backend
+    build:
+      context: ./servers/notification
+    env_file:
+      - ./servers/notification/.env.notification
+    restart: unless-stopped
+    networks:
+      - givegetgo-network
+    depends_on:
+      - notification-postgres
+      - givegetgo-redis
 
   user-postgres:
     image: postgres
-    container_name: user-postgres
+    container_name: givegetgo-eks-user-postgres-db
     networks:
       - givegetgo-network
     env_file:
@@ -87,7 +105,7 @@ services:
 
   verification-postgres:
     image: postgres
-    container_name: verification-postgres
+    container_name: givegetgo-eks-verification-postgres-db
     networks:
       - givegetgo-network
     env_file:
@@ -97,7 +115,7 @@ services:
 
   post-postgres:
     image: postgres
-    container_name: post-postgres
+    container_name: givegetgo-eks-post-postgres-db
     networks:
       - givegetgo-network
     env_file:
@@ -107,7 +125,7 @@ services:
 
   bid-postgres:
     image: postgres
-    container_name: bid-postgres
+    container_name: givegetgo-eks-bid-postgres-db
     networks:
       - givegetgo-network
     env_file:
@@ -117,7 +135,7 @@ services:
 
   match-postgres:
     image: postgres
-    container_name: match-postgres
+    container_name: givegetgo-eks-match-postgres-db
     networks:
       - givegetgo-network
     env_file:
@@ -125,18 +143,28 @@ services:
     volumes:
       - match-postgres:/var/lib/postgresql/data
 
-  redis:
+  notification-postgres:
+    image: postgres
+    container_name: givegetgo-eks-notification-postgres-db
+    networks:
+      - givegetgo-network
+    env_file:
+      - ./servers/notification/.env.notification
+    volumes:
+      - notification-postgres:/var/lib/postgresql/data
+
+  givegetgo-redis:
     image: redis
-    container_name: redis
+    container_name: givegetgo-redis
     ports:
       - "6379:6379"
     networks:
       - givegetgo-network
+    env_file:
+      - ./redis/.env.redis
     volumes:
       - ./redis.conf:/usr/local/etc/redis/redis.conf 
       - redis-data:/data
-    command:
-      redis-server /usr/local/etc/redis/redis.conf
 
 volumes:
   user-postgres:
@@ -144,6 +172,7 @@ volumes:
   post-postgres:
   bid-postgres:
   match-postgres:
+  notification-postgres:
   redis-data:
 
 networks:
