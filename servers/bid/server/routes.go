@@ -30,15 +30,18 @@ func NewRouter(DB *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	bidAuthGroup.Use(defaultRateLimiter)
 	bidAuthGroup.Use(middleware.AuthMiddleware())
 	{
-		// defaultBidAuthGroup := bidAuthGroup.Group("")
-		// {
-
-		// }
-
+		defaultBidAuthGroup := bidAuthGroup.Group("")
+		{
+	        defaultBidAuthGroup.GET("/by-post/:postid", controller.GetBidsForPostHandler(bidUtils))
+		    defaultBidAuthGroup.GET("/:bidid", controller.FindBidByIDHandler(bidUtils))
+		}
 		sensitiveBidAuthGroup := bidAuthGroup.Group("")
 		sensitiveBidAuthGroup.Use(sensitiveRateLimiter)
 		{
 			sensitiveBidAuthGroup.POST("/bid", controller.AddBidHandler(bidUtils))
+            sensitiveBidAuthGroup.POST("/by-post/:postid", controller.AddBidHandler(bidUtils))
+		    sensitiveBidAuthGroup.DELETE("/:bidid", controller.DeleteBidHandler(bidUtils))
+		    sensitiveBidAuthGroup.PUT("/:bidid", controller.UpdateBidDescriptionHandler(bidUtils))
 		}
 	}
 

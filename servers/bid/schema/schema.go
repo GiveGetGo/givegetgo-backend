@@ -10,6 +10,15 @@ const (
 	Rejected  BidStatus = "Rejected"
 )
 
+type PostStatus string
+
+const (
+	Active  PostStatus = "Active"
+	Matched PostStatus = "Matched"
+	Closed  PostStatus = "Closed"
+	Expired PostStatus = "Expired"
+)
+
 type Bid struct {
 	BidID          uint `gorm:"primaryKey"`
 	PostID         uint `gorm:"index"`
@@ -25,4 +34,14 @@ type BidInfoResponse struct {
 	Username       string `json:"username"`
 	BidDescription string `json:"BidDescription"`
 	DateSubmitted  string `json:"DateSubmitted"`
+}
+
+type PostResponse struct {
+	PostID      uint       `json:"postID"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Category    string     `json:"category"`
+	Username    string     `json:"username"`
+	DatePosted  time.Time  `json:"date_posted"`
+	Status      PostStatus `json:"status"`
 }
