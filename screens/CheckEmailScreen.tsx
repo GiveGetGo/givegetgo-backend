@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFonts, Montserrat_700Bold_Italic } from '@expo-google-fonts/montserrat';
+import requestMFASetup from './SignUpScreen'
 
 type RootStackParamList = {
   CheckEmailScreen: undefined;
@@ -36,25 +37,65 @@ const CheckEmailScreen: React.FC = () => {
       setCode(text);
       if (text.length === 7) {
         handleCodeComplete(text);
-        handleConfirm();
+        verifyEmailCode(email, 'register', text)
       }
     }
   };
 
   const handleConfirm = () => {
-    // add api here; if success fo to ConfirmationScreen; else clean up the digits and stay in the current page
     navigation.navigate('ConfirmationScreen');
   };
 
   const handleResendCode = () => {
-    // add api here
+    requestMFASetup
   };
+
+  async function verifyEmailCode(email: string, event: string, verificationCode: string) {
+    try {
+      const response = await fetch('http://api.givegetgo.xyz/v1/verification/verify-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          event: event,
+          verification_code: verificationCode
+        }),
+      });
+  
+      const json = await response.json(); // Parse the JSON response
+      console.log("Verification response:", json);
+  
+      if (response.status === 200) {
+        console.log('Email verified successfully:', json);
+        alert('Email verified successfully!');
+        handleConfirm();
+        // You can navigate to another screen or update the UI accordingly
+      } else if (response.status === 400) {
+        console.error('Bad request:', json.msg);
+        alert(`Error: ${json.msg}`);
+      } else if (response.status === 401) {
+        console.error('Unauthorized:', json.msg);
+        alert(`Error: ${json.msg}`);
+      } else if (response.status === 500) {
+        console.error('Internal server error:', json.msg);
+        alert(`Error: ${json.msg}`);
+      } else {
+        console.error('Unexpected error:', json);
+        alert(`Error: ${json.msg}`);
+      }
+    } catch (error) {
+      console.error('Network error:', error);
+      alert('Failed to connect to the server. Please try again later.');
+    }
+  }
 
   useEffect(() => {
     // Fetch the email from the backend
     const fetchEmail = async () => {                        
       try {
-        const response = await fetch('URL_TO_YOUR_BACKEND/json_endpoint');
+        const response = await fetch('http://api.givegetgo.xyz/v1/user/me');
         const json = await response.json();
         setEmail(json.email); // Adjust this depending on the structure of your JSON
       } catch (error) {

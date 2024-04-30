@@ -33,34 +33,35 @@ const LoginScreen: React.FC = () => {
   const handleLogin = async () => {
     navigation.navigate('MainScreen'); 
     // showModal('Login failed: Incorrect email or password.'); //uncomment this to format modal
-    // try {
-    //   const response = await fetch('http://api.givegetgo.xyz/v1/user/login', {
-    //     method: 'POST',
-    //     headers: {
-    //       'Content-Type': 'application/json',
-    //     },
-    //     body: JSON.stringify({
-    //       email: email,
-    //       password: password,
-    //     }),
-    //   });
+    try {
+      const response = await fetch('http://api.givegetgo.xyz/v1/user/login', {
+        method: 'POST',
+        credentials: "include",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      });
   
-    //   const json = await response.json();
-    //   console.log("login info", json)
+      const json = await response.json();
+      console.log("login info", json)
   
-    //   if (response.status === 200) {
-    //     console.log('Login successful:', json);
-    //     navigation.navigate('MainScreen'); // Navigate to the main screen on success
-    //   } else {
-    //     // Handle different types of errors based on response status
-    //     console.error('Login failed:', json.msg);
-    //     alert(`Login failed: ${json.msg}`);
-    //   }
-    // } catch (error) {
-    //   // Handle network errors or other unexpected issues
-    //   console.error('Network error:', error);
-    //   alert('Failed to connect to the server. Please try again later.');
-    // }
+      if (response.status === 200) {
+        console.log('Login successful:', json);
+        navigation.navigate('MainScreen'); // Navigate to the main screen on success
+      } else {
+        // Handle different types of errors based on response status
+        console.error('Login failed:', json.msg);
+        alert(`Login failed: ${json.msg}`);
+      }
+    } catch (error) {
+      // Handle network errors or other unexpected issues
+      console.error('Network error:', error);
+      alert('Failed to connect to the server. Please try again later.');
+    }
   };
 
   return (

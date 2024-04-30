@@ -54,20 +54,35 @@ export default App;
 // following up, those positioned "absolute" will not be counted in when using justifyContent or alignItems
 
 // Api Spec:
-// user/login (need to uncomment)
-// user/register
-// mfa/register (with problem)
+// LoginScreen: 'user/login' (DONE) (Now uncommented) (NEED TO CHANGE) (add post mfa)
+// HomeScreen: /post (GET) (DONE, but need reload), 
+// 'user/me' needs ProfilePicture (will not have it for now)
+// SettingsScreen: 'user/logout' (DONE but restart at frontend will not work), test 'setUserInfo(json)' in 'user/me' (GET and PUT), need to test, add setProfilePic
+// PostScreen: /post (POST), need to test
+// Notifications: 
+// get qr code (get mfa) in registerScreen
+// SignUpScreen: 'user/register' works, '/mfa' needs to be fixed and test (NEED TO CHANGE) (Email Verification)
+// CheckEmailScreen:　'verification/verify-email' needs to be fixed and test, '/mfa' needs to get checked if 'email' is passed; 'user/me' needs to test (NEED TO CHANGE)
+// ForgotPasswordScreen: '/user/forgot-password' needs to test 
+
+// TODOs before presentation:
+// make sure all default data fits (資料啥時清空)
+// mfa page and api?
+// hook settingsScreen (GET, PUT), redux for get and put calls    (先能正確default input 再測試put finally pic with redux)  (現在put then get 會壞掉 可能是後端)
+// figure out what this is: Network error: [SyntaxError: JSON Parse error: Unexpected character: L]
+// xcode or some other device
 
 // Main tasks:
-// connect api, starting from loginScreen //now:user,mfa,verification, post, notification
-// add notifications on email, password constraints when signing up
-// post delete edit (at PostScreen below, add "see previous post")
-// notification add read boolean (currently no api)
-// format CheckEmailScreen, ConfirmationScreen, modals in loginScreen and SettingsScreen (maybe to alert?)
+// fetch api from web
+// connect api, starting from loginScreen 
 // make sure there's a default/demo data for each screen needed
+// Post could not get typed on window
+// format CheckEmailScreen, ConfirmationScreen
+
 // hook expo-font (might need) ()so far imported but not really used
 
 // if have time: 
+// some phones does not show proper sizes
 // from profile (and some others), make each post's detailed page
 // ProfileScreen bio, reply needs word limit
 // animation among notification pages? (react-native-reanimated transition; ask claude) (or simply use modal; https://reactnative.dev/docs/modal)
@@ -78,6 +93,11 @@ export default App;
 // hook expo-font (might need) ()so far imported but not really used
 // color: #FAFAFA + #789EC9
 // add some emojis in post and notifications (looks boring rn)
+// profile pic in backend (userID should have "profilePic")
+// add notifications on email, password constraints when signing up
+// post delete edit (at PostScreen below, add "see previous post")
+// notification add read boolean (currently no api)
+// messageing, make friend systems
 
 // CSS status:
 // ProfileScreen: (DONE) container, headContainer, header could be replicated to other pages with backspace; card settings

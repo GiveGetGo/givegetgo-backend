@@ -32,11 +32,11 @@ type History = {
 };
 
 const defaultUserInfo: UserInfo = {   
-  name: 'Gilbert Hsu',
-  email: 'xxx@gmail.com',
-  bio: 'I am Gilbert the magician.',
-  profilePicture: '', 
-  major: 'Computer Science',                     
+  name: 'Sean Chang',
+  email: 'chang755@purdue.edu',
+  bio: 'Hi I am Sean.',
+  profilePicture: './profile_icon.jpg', 
+  major: 'CompE',                     
   classYear: 2024,
 };
 

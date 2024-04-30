@@ -31,6 +31,7 @@ const SignUpScreen: React.FC = () => {
   };
 
   async function registerUser(email: string, password: string, schoolClass: string, major: string) {
+    navigation.navigate('CheckEmailScreen'); //for testing
     try {
       const response = await fetch('http://api.givegetgo.xyz/v1/user/register', {
         method: 'POST',
@@ -66,12 +67,14 @@ const SignUpScreen: React.FC = () => {
 
   async function requestMFASetup() {
     try {
-      const response = await fetch('http://api.givegetgo.xyz/v1/mfa/request', {
+      const response = await fetch('http://api.givegetgo.xyz/v1/mfa', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
-        // No body is needed if the API does not require parameters for MFA request
+        },
+        body: JSON.stringify({
+          email: email,
+        }),
       });
   
       const json = await response.json(); // Parse the JSON response

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView, StyleSheet, View, FlatList, Dimensions, TouchableOpacity, TouchableWithoutFeedback, Keyboard, ScrollView } from 'react-native';
 import { BottomNavigation, Text, Searchbar, Card, Title, Paragraph, Avatar, IconButton, Button, List, Divider, TextInput, Modal } from 'react-native-paper';
+import { useIsFocused } from '@react-navigation/native';
 import { NavigationContainer, CommonActions } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NativeStackScreenProps, createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useRoute, RouteProp } from '@react-navigation/native';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import SeeRequestScreen from './SeeRequestScreen'; 
 import RatingScreen from './RatingScreen'; 
 import ProfileScreen from './ProfileScreen'; 
@@ -21,6 +22,7 @@ import AvatarPickerScreen from './AvatarPickerScreen';
 import PostSubmittedScreen from './PostSubmittedScreen'; 
 import { useFonts, Montserrat_700Bold_Italic } from '@expo-google-fonts/montserrat';            
 import * as Updates from 'expo-updates';
+import { setAvatarUri } from '../store';
 
 type RootStackParamList = {
     MainScreen: undefined;
@@ -48,7 +50,6 @@ type Post = {
     id: string;
     title?: string; // Optional, if your posts have titles
     description?: string; // Optional, if your posts have descriptions
-    // Include other properties for your posts, like images, etc.
   };
 
 type Notification = {
@@ -303,18 +304,60 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }: HomeScreenProps) 
 
     const [posts, setPosts] = React.useState<Post[]>(posts_data); 
 
-    useEffect(() => {                                                                     //fill this in to get db info
+    // useEffect(() => { //only reload after
+ 
+    //     const fetchPostsData = async () => {
+    //         try {
+    //         const response = await fetch(`http://api.givegetgo.xyz/v1/post`, {
+    //             method: 'GET',
+    //             headers: {
+    //             'Content-Type': 'application/json',
+    //             },
+    //         });
+
+    //         if (response.ok) {
+    //             const json = await response.json();
+    //             setPosts(json.data); // Assuming the JSON response structure matches your state structure
+    //         } else {
+    //             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    //         }
+    //         } catch (error) {
+    //         console.error('Error fetching posts:', error);
+    //         // Optionally alert the user or handle the error visually in the UI
+    //         }
+    //     };
+
+    // fetchPostsData();
+    // }, []);
+
+    const isFocused = useIsFocused();
+    useEffect(() => {
         const fetchPostsData = async () => {
           try {
-            const response = await fetch('URL_TO_YOUR_BACKEND/posts_data_endpoint');
-            const json = await response.json();
-            setPosts(json); // Adjust this depending on the structure of your JSON
+            const response = await fetch('http://api.givegetgo.xyz/v1/post', {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+    
+            if (response.ok) {
+              const json = await response.json();
+              setPosts(json.data); // Assuming the JSON response structure matches your state structure
+            } else {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
           } catch (error) {
-            // console.error(error); // uncomment this after finish frontend developing
+            console.error('Error fetching posts:', error);
+            // Optionally alert the user or handle the error visually in the UI
           }
         };
-        fetchPostsData();
-      }, []);
+    
+        if (isFocused) {
+          fetchPostsData();
+        }
+    
+      }, [isFocused]); 
 
     const handleProfilePress = () => {
         navigation.navigate('ProfileScreen'); 
@@ -398,10 +441,39 @@ const PostScreen: React.FC<PostScreenProps> = ({ navigation }: PostScreenProps) 
 
   const [fontsLoaded] = useFonts({ Montserrat_700Bold_Italic }); 
 
+  const handlePostPressApi = async () => {
+    try {
+        const response = await fetch('http://api.givegetgo.xyz/v1/post', {
+            method: 'POST',
+            credentials: "include",
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                title: title,
+                description: description,
+                category: 'gm'
+              }),
+        });
+
+        const json = await response.json();
+        console.log('Post submitted with Title:', title, 'and Description:', description);
+
+        if (response.status === 201) {
+            console.log('Post created successfully:', json);
+            navigation.navigate('PostSubmittedScreen');
+        } else {
+            throw new Error(`Failed with status ${response.status}: ${json.msg}`);
+        }
+    } catch (error) {
+        console.error('Error submitting post:', error);
+        alert('Failed to submit post. Please try again.');
+    }
+};
+
   const handlePostPress = () => {
-    // TODO: Implement your submit post logic here
-    // TODO: generate PostID
-    navigation.navigate('PostSubmittedScreen')
+    handlePostPressApi()
+    // navigation.navigate('PostSubmittedScreen')
     console.log('Post submitted with Title:', title, 'and Description:', description);
   };
 
@@ -538,19 +610,79 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
       };
 
     const [userInfo, setUserInfo] = React.useState<UserInfo>(currentUserInfo);
-
-    useEffect(() => {                                                                    //fill this in to get db info
+    const dispatch = useDispatch(); 
+    const isFocused = useIsFocused();
+    useEffect(() => {
         const fetchUserInfo = async () => {
           try {
-            const response = await fetch('URL_TO_YOUR_BACKEND/user_info_endpoint');
-            const json = await response.json();
-            setUserInfo(json); // Adjust this depending on the structure of your JSON
+            const response = await fetch('http://api.givegetgo.xyz/v1/user/me', {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+    
+            if (response.ok) {
+              const json = await response.json();
+              console.log('Profile loaded successfully:', json);
+              setUserInfo({
+                name: json.data.username, 
+                email: json.data.email,
+                major: json.data.major,
+                classYear: json.data.class,
+                bio: json.data.profile_info, 
+                profilePicture: json.data.profile_image
+              });
+              dispatch(setAvatarUri(json.data.profile_image));
+              console.log("New Avatar from backend: ", json.data.profile_image)
+              console.log("updated userInfo: ", userInfo)
+            } else {
+              // Handle errors
+              console.error('Failed to fetch user info:', response.status);
+            }
           } catch (error) {
-            // console.error(error); // uncomment this after finish frontend developing
+            console.error('Network error when fetching user info:', error);
           }
         };
-        fetchUserInfo();
-      }, []);
+    
+        if (isFocused) {
+            fetchUserInfo();
+          }
+    }, [isFocused, dispatch]);
+
+    const handleSaveProfile = async (updates: Partial<UserInfo>) => {
+        try {
+            const response = await fetch('http://api.givegetgo.xyz/v1/user/me', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: updates.name,
+                    email: updates.email, // Assuming you can update email via PUT
+                    class: updates.classYear,
+                    major: updates.major,
+                    profileInfo: updates.bio, // Assuming you want to update bio or similar
+                    profile_image: updates.profilePicture
+                }),
+            });
+    
+            if (response.ok) {
+                const json = await response.json();
+                console.log('Profile updated successfully:', json);
+                setUserInfo(updateUserInfo(userInfo, updates));
+                // update redux
+                dispatch(setAvatarUri(updates.profilePicture));
+            } else {
+                // Handle errors
+                const errorJson = await response.json();
+                alert(`Failed to update profile: ${errorJson.msg}`);
+            }
+        } catch (error) {
+            console.error('Network error when updating user info:', error);
+            alert('Failed to connect to the server. Please try again later.');
+        }
+    };
 
     function updateUserInfo(currentInfo: UserInfo, updates: Partial<UserInfo>): UserInfo {
         // Return a new object that combines the current info with the updates
@@ -571,6 +703,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
     const [isEditing_pic, setIsEditing_pic] = useState(false);
     const [profilePicture, setProfilePicture] = useState<string>(userInfo.profilePicture);
 
+    // Effect to update local state when userInfo changes
+    useEffect(() => {
+        if (isFocused)
+            setName(userInfo.name);
+            setEmail(userInfo.email);
+            setBio(userInfo.bio);
+    }, [userInfo]);
+
     const handleEditPress_name = () => {
         setIsEditing_name(true);
     };
@@ -578,6 +718,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
     const handleSavePress_name = () => {
         setUserInfo(prev => updateUserInfo(prev, { name: name })); //updated userInfo should also be saved to the database
         setIsEditing_name(false);
+        handleSaveProfile({ name: name });
     };
 
     const handleEditPress_email = () => {
@@ -587,6 +728,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
     const handleSavePress_email = () => {
         setUserInfo(prev => updateUserInfo(prev, { email: email }));
         setIsEditing_email(false);
+        handleSaveProfile({ email: email });
     };
 
     const handleEditPress_bio = () => {
@@ -596,11 +738,46 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
     const handleSavePress_bio = () => {
         setUserInfo(prev => updateUserInfo(prev, { bio: bio }));
         setIsEditing_bio(false);
+        handleSaveProfile({ bio: bio });
     };
 
     const handleEditPress_pic = () => {
         setIsEditing_pic(true);
         navigation.navigate('AvatarPickerScreen')  
+    };
+
+    const handleSavePress_profilePicture = (newAvatarUri:string) => {
+        setUserInfo(prev => updateUserInfo(prev, { profilePicture: newAvatarUri }));
+        handleSaveProfile({ profilePicture: newAvatarUri });
+    };
+
+    const handleLogOutApi = async () => {
+        try {
+            const response = await fetch('http://api.givegetgo.xyz/v1/user/logout', {
+                method: 'GET',
+                credentials: "include",
+                headers: {
+                    // 'Content-Type': 'application/json',
+                },
+            });
+    
+            const json = await response.json();
+            console.log("Logout response:", json);
+    
+            if (response.status === 200) {
+                console.log('User logged out successfully:', json);
+                handleLogOut()
+            } else if (response.status === 500) {
+                console.error('Internal server error:', json.msg);
+                alert(`Error: ${json.msg}`);
+            } else {
+                console.error('Unexpected error during logout:', json);
+                alert(`Error: ${json.msg}`);
+            }
+        } catch (error) {
+            console.error('Network error during logout:', error);
+            alert('Failed to connect to the server. Please try again later.');
+        }
     };
 
     // Restarting Expo
@@ -622,8 +799,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
         showModal(); // Show the modal
         setTimeout(() => {
             hideModal(); // Hide the modal
-            restartApp(); // Then restart the app
-        }, 2000); // Delay in milliseconds
+            restartApp(); // Then restart the app //does not work on web
+        }, 4000); // Delay in milliseconds //used to be 2000
         // restartApp()
     };
 
@@ -635,12 +812,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
 
     // Update profile picture when newAvatarUri changes
     useEffect(() => {
-        if (newAvatarUri) {
-            console.log("newAvatarUri detected")
-            setUserInfo(prevUserInfo => ({
-                ...prevUserInfo,
-                profilePicture: newAvatarUri
-            }));
+        if (isFocused)
+            if (newAvatarUri) {
+                console.log("newAvatarUri detected")
+                // setUserInfo(prevUserInfo => ({
+                //     ...prevUserInfo,
+                //     profilePicture: newAvatarUri
+                // }));
+                handleSavePress_profilePicture(newAvatarUri)
         }
     }, [newAvatarUri]);
 
@@ -697,9 +876,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
             <View style={styles.settingsContainer}>
                 {/* <Text style={styles.userInfo}>Updated User Info: {JSON.stringify(userInfo, null, 2)}</Text> */ /*testing if the userInfo file got successfully updated*/} 
                 <Avatar.Image source={getProfilePictureSource(userInfo.profilePicture)} size={80} style={styles.settings_avatar} /> 
-                <Text style={styles.name}>{name}</Text>
+                <Text style={styles.name}>{userInfo.name}</Text>
                 <Text style={styles.details}>{`Class of ${userInfo.classYear} • ${userInfo.major}`}</Text>
-                <Text style={styles.details_bio}>{bio}</Text>
+                <Text style={styles.details_bio}>{userInfo.bio}</Text>
                 <Divider style={styles.divider} />
                 <Card style={styles.settings_card} mode="contained">
                     {/* <Card.Title title="Name" /> */}
@@ -717,7 +896,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
                             title="Name"
                             titleStyle={styles.settings_title}
                             descriptionStyle={styles.settings_description}
-                            description={name}
+                            description={userInfo.name}
                             right={props => 
                                 <IconButton
                                     icon="pencil"
@@ -746,7 +925,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
                             title="Email"
                             titleStyle={styles.settings_title}
                             descriptionStyle={styles.settings_description}
-                            description={email}
+                            description={userInfo.email}
                             right={props => 
                                 <IconButton
                                     icon="pencil"
@@ -775,7 +954,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
                             title="Bio"
                             titleStyle={styles.settings_title}
                             descriptionStyle={styles.settings_description}
-                            description={bio}
+                            description={userInfo.bio}
                             right={props => 
                                 <IconButton
                                     icon="pencil"
@@ -829,7 +1008,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
                     </Card.Content>
                 </Card>
                 <Divider style={styles.divider} />
-                <Button mode="contained" onPress={handleLogOut} style={styles.logOutButton}>
+                <Button mode="contained" onPress={handleLogOutApi} style={styles.logOutButton}>
                     Log Out
                 </Button>
                 <Modal visible={visible} onDismiss={hideModal} contentContainerStyle={styles.modal}>
@@ -903,7 +1082,7 @@ homecard_title: {
     fontWeight: '600',
     marginTop: 1,
     marginBottom: 1,
-    lineHeight: 0,
+    lineHeight: 18,
     // color: '#FAFAFA',
 },
 homecard_description: {
@@ -914,6 +1093,7 @@ homecard_description: {
 },
 home_card: { 
     borderRadius: 15, // Add rounded corners to the card
+    // marginVertical: 6,
     margin: 8,
     justifyContent: 'center',
     padding: 3,
@@ -968,7 +1148,7 @@ post_input_description: {
     fontSize: 16,
     marginBottom: 5, 
     textAlignVertical: 'top',
-    paddingBottom: 140,
+    paddingBottom: 110,
 },
 titleButtonContainer: {
     flexDirection: 'row',

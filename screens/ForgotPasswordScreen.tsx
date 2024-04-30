@@ -27,8 +27,48 @@ const ForgotPasswordScreen: React.FC = () => {
   };
 
   const handleSignUp = () => {
-    navigation.navigate('SignUpScreen');
+    // navigation.navigate('SignUpScreen');
+    forgotPassword(email)
   };
+
+  async function forgotPassword(email: string) {
+    try {
+      const response = await fetch('http://api.givegetgo.xyz/v1/user/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email })
+      });
+  
+      const json = await response.json(); // Parse the JSON response
+      console.log("Forgot password response:", json);
+  
+      if (response.status === 200) {
+        console.log('Forgot password request successful:', json);
+        alert('Password reset instructions have been sent to your email.');
+        navigation.navigate('SignUpScreen');
+      } else if (response.status === 400) {
+        console.error('Bad request:', json.msg);
+        alert(`Error: ${json.msg}`);
+      } else if (response.status === 401) {
+        console.error('Unauthorized access:', json.msg);
+        alert(`Error: ${json.msg}`);
+      } else if (response.status === 429) {
+        console.error('Too many requests:', json.msg);
+        alert(`Error: ${json.msg}`);
+      } else if (response.status === 500) {
+        console.error('Internal server error:', json.msg);
+        alert(`Error: ${json.msg}`);
+      } else {
+        console.error('Unexpected error:', json);
+        alert(`Error: ${json.msg}`);
+      }
+    } catch (error) {
+      console.error('Network error:', error);
+      alert('Failed to connect to the server. Please try again later.');
+    }
+  }
 
   return (
     <View style={styles.container}>
