@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: givegetgo-verification-postgres
+  namespace: argocd
+spec:
+  project: givegetgo-development
+  source:
+    repoURL: 'https://github.com/GiveGetGo/givegetgo-backend.git'
+    path: 'charts/verification-postgres'
+    targetRevision: development
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: givegetgo-development
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - dryRunMode=server

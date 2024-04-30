@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "post-postgres.fullname" . }}
+  labels:
+    {{- include "post-postgres.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "post-postgres.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "post-postgres.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: postgres
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "post-postgres.fullname" . }}-secret
+                  key: POST_POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "post-postgres.fullname" . }}-secret
+                  key: POST_POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "post-postgres.fullname" . }}-secret
+                  key: POST_POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/post/pgdata
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: post-postgres-storage
+      volumes:
+        - name: post-postgres-storage
+          persistentVolumeClaim:
+            claimName: {{ include "post-postgres.fullname" . }}-pvc
