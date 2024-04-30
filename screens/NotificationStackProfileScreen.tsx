@@ -30,11 +30,11 @@ type History = {
 };
 
 const currentUserInfo: UserInfo = { //should be loaded from the database
-  name: 'Jimmy Ho',
-  email: 'xxx@gmail.com',
-  bio: 'Hi I am Jimmy.',
-  profilePicture: '', 
-  major: 'Computer Engineering',
+  name: 'Rita Cheng',
+  email: 'rita@purdue.edu',
+  bio: 'Hello World!',
+  profilePicture: '../assets/avatars/avatar1.png', 
+  major: 'Computer Science',
   classYear: 2024,
 };
 
@@ -43,15 +43,15 @@ const history_data: History[] = [ //should be loaded from the database //[] beca
     id: '1',
     title: 'Match',
     subtitle: '$10 Panera Giftcard ',
-    description: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...',
+    description: 'I need some Panera gift cards.',
     time: '1 hour ago',
     rating: 3,
   },
   {
     id: '2',
     title: 'Request',
-    subtitle: '$10 Panera Giftcard ',
-    description: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...',
+    subtitle: '$20 Panera Giftcard ',
+    description: 'I need Panera.',
     time: '2 hour ago',
   },
 ];
@@ -59,6 +59,25 @@ const history_data: History[] = [ //should be loaded from the database //[] beca
 const NotificationStackProfileScreen: React.FC = () => {
 
   const use_navigation = useNavigation(); //for Appbar.BackAction
+
+  // require() could not directly take the url
+  interface ImageMap {
+    [key: string]: NodeRequire;
+  }
+  const imageMap: { [key: string]: NodeRequire } = {
+      '../assets/avatars/avatar1.png': require('../assets/avatars/avatar1.png'),
+      '../assets/avatars/avatar2.png': require('../assets/avatars/avatar2.png'),
+      '../assets/avatars/avatar3.png': require('../assets/avatars/avatar3.png'),
+      '../assets/avatars/avatar4.png': require('../assets/avatars/avatar4.png'),
+      '../assets/avatars/avatar5.png': require('../assets/avatars/avatar5.png'),
+      '../assets/avatars/avatar6.png': require('../assets/avatars/avatar6.png'),
+      '../assets/avatars/avatar7.png': require('../assets/avatars/avatar7.png'),
+      '../assets/avatars/avatar8.png': require('../assets/avatars/avatar8.png'),
+      '../assets/avatars/avatar9.png': require('../assets/avatars/avatar9.png'),
+  };
+  const getProfilePictureSource = (uri: string) => {
+      return imageMap[uri] || require(`./profile_icon.jpg`);
+  };
 
   const renderItem = ({ item }: { item: History })  => (
     <Card style={styles.history_card}>
@@ -93,7 +112,7 @@ const NotificationStackProfileScreen: React.FC = () => {
         <Text style={styles.header}>GiveGetGo</Text>
         <View style={styles.backActionPlaceholder} />
       </View>
-      <Avatar.Image source={require('./profile_icon.jpg')} style={styles.settings_avatar} /> 
+      <Avatar.Image source={getProfilePictureSource(currentUserInfo.profilePicture)} style={styles.settings_avatar} /> 
       <Text style={styles.name}>{currentUserInfo.name}</Text>
       <Text style={styles.details}>{`Class of ${currentUserInfo.classYear} • ${currentUserInfo.major}`}</Text>
       <Text style={styles.details_bio}>{currentUserInfo.bio}</Text>

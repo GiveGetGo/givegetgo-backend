@@ -55,12 +55,12 @@ const LoginScreen: React.FC = () => {
       } else {
         // Handle different types of errors based on response status
         console.error('Login failed:', json.msg);
-        alert(`Login failed: ${json.msg}`);
+        // alert(`Login failed: ${json.msg}`);   uncomment this
       }
     } catch (error) {
       // Handle network errors or other unexpected issues
       console.error('Network error:', error);
-      alert('Failed to connect to the server. Please try again later.');
+      // alert('Failed to connect to the server. Please try again later.');
     }
   };
 

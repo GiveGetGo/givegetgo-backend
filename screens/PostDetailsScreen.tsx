@@ -27,8 +27,8 @@ type PostOwnerProfile = {
 const defaultPostOwnerProfile: PostOwnerProfile = {
   post_id: '1',
   name: 'Kevin Lu',
-  title: 'JavaScript Essentials',
-  description: 'I need this book for my CS180 class.',
+  title: 'Taking Care of My Cat',
+  description: 'I will be out of town on February 28th and need someone to look over my cat Lana.',
   avatar: '../assets/avatars/avatar5.png',
 };
 
@@ -111,7 +111,7 @@ const PostDetailsScreen: React.FC<HomeScreenProps> = ({ navigation }: HomeScreen
             mode="contained"
             onPress={() => goToRequestInfoScreen(postId, postOwnerProfile.name)} 
           >
-            Send Request
+            Send Bid
           </Button>
         </Card.Actions>
       </Card>

@@ -96,7 +96,7 @@ const posts_data: Post[] = [
 const notifications_data: Notification[] = [
     {
       id: '1',
-      title: 'Request',
+      title: 'Bid',
       time: '1 hour ago',
       description: 'New matching request from Rita Cheng for your "C Programming Guide".'
     },
@@ -108,7 +108,7 @@ const notifications_data: Notification[] = [
     },
     {
       id: '3',
-      title: 'Request',
+      title: 'Bid',
       time: '3 hours ago',
       description: 'New matching request from Carol D. for your "Advanced Calculus".'
     },
@@ -554,7 +554,7 @@ const NotificationScreen: React.FC<NotificationsProps> = ({ navigation }: Notifi
           style={styles.notifications_card}
           onPress={() => {
             // Navigate based on item.title
-            if (item.title === 'Request') {
+            if (item.title === 'Bid') {
                 navigation.navigate('SeeRequestScreen')
             } else if (item.title === 'Match') {
                 navigation.navigate('RatingScreen')
@@ -635,7 +635,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
               });
               dispatch(setAvatarUri(json.data.profile_image));
               console.log("New Avatar from backend: ", json.data.profile_image)
-              console.log("updated userInfo: ", userInfo)
+              console.log("Bio: ", json.data.profile_info)
+              console.log("Fetched userInfo: ", userInfo)
             } else {
               // Handle errors
               console.error('Failed to fetch user info:', response.status);
@@ -651,28 +652,46 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }: SettingsS
     }, [isFocused, dispatch]);
 
     const handleSaveProfile = async (updates: Partial<UserInfo>) => {
+        const updatedUserInfo = {
+            name: updates.name !== undefined ? updates.name : userInfo.name,
+            email: updates.email !== undefined ? updates.email : userInfo.email,
+            classYear: updates.classYear !== undefined ? updates.classYear : userInfo.classYear,
+            major: updates.major !== undefined ? updates.major : userInfo.major,
+            bio: updates.bio !== undefined ? updates.bio : userInfo.bio,
+            profilePicture: updates.profilePicture !== undefined ? updates.profilePicture : userInfo.profilePicture
+        };
+        const payload = {
+            username: updatedUserInfo.name,
+            email: updatedUserInfo.email,
+            class: updatedUserInfo.classYear,
+            major: updatedUserInfo.major,
+            profile_info: updatedUserInfo.bio,
+            profile_image: updatedUserInfo.profilePicture
+        };
         try {
-            const response = await fetch('http://api.givegetgo.xyz/v1/user/me', {
+            console.log("payload: ",payload)
+            const response = await fetch('http://api.givegetgo.xyz/v1/user/me', {                 
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    username: updates.name,
-                    email: updates.email, // Assuming you can update email via PUT
-                    class: updates.classYear,
-                    major: updates.major,
-                    profileInfo: updates.bio, // Assuming you want to update bio or similar
-                    profile_image: updates.profilePicture
-                }),
+                // body: JSON.stringify({
+                //     username: updates.name,
+                //     email: updates.email, // Assuming you can update email via PUT
+                //     class: updates.classYear,
+                //     major: updates.major,
+                //     profileInfo: updates.bio, // Assuming you want to update bio or similar
+                //     profile_image: updates.profilePicture
+                // }),
+                body: JSON.stringify(payload),
             });
     
             if (response.ok) {
                 const json = await response.json();
                 console.log('Profile updated successfully:', json);
-                setUserInfo(updateUserInfo(userInfo, updates));
+                setUserInfo(updateUserInfo(userInfo, updatedUserInfo));
                 // update redux
-                dispatch(setAvatarUri(updates.profilePicture));
+                dispatch(setAvatarUri(updatedUserInfo.profilePicture));
             } else {
                 // Handle errors
                 const errorJson = await response.json();

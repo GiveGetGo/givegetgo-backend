@@ -64,7 +64,7 @@ const PostRequestInfoScreen: React.FC<HomeScreenProps> = ({ navigation }: HomeSc
 
   const submitRequest = (postId: string, name: string) => {
     setPostBid(prev => updatePostBid(prev, { message: request }))
-    console.log('Request sent:', request);
+    console.log('Bid sent:', request);
     navigation.navigate('PostRequestSucceedScreen', {postId: postId, name: name});
   };
 
@@ -85,7 +85,7 @@ const PostRequestInfoScreen: React.FC<HomeScreenProps> = ({ navigation }: HomeSc
             </View>
             <View style={styles.request_container}>
                 <Card style={styles.card}>
-                    <Card.Title title="Request Info" titleStyle={styles.cardTitle}/>
+                    <Card.Title title="Bid Info" titleStyle={styles.cardTitle}/>
                     <Card.Content>
                     <TextInput
                         label="Please provide details here..."
