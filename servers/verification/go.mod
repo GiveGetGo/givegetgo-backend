@@ -3,11 +3,12 @@ module verification
 go 1.22.0
 
 require (
-	github.com/GiveGetGo/shared v0.2.13
+	github.com/GiveGetGo/shared v0.2.18
 	github.com/gin-gonic/gin v1.9.1
 	github.com/golang/mock v1.6.0
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/sendgrid/sendgrid-go v3.14.0+incompatible
+	github.com/ulule/limiter/v3 v3.11.2
 	gorm.io/driver/postgres v1.5.7
 	gorm.io/gorm v1.25.10
 )
@@ -45,7 +46,6 @@ require (
 	github.com/sendgrid/rest v2.6.9+incompatible // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
-	github.com/ulule/limiter/v3 v3.11.2 // indirect
 	golang.org/x/arch v0.7.0 // indirect
 	golang.org/x/crypto v0.22.0 // indirect
 	golang.org/x/net v0.24.0 // indirect
