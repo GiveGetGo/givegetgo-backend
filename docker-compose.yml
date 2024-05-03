@@ -16,6 +16,7 @@ services:
       - givegetgo-match-backend
 
   givegetgo-user-backend:
+    image: ghcr.io/givegetgo/givegetgo-backend/givegetgo-user-backend:latest
     container_name: givegetgo-user-backend
     build:
       context: ./servers/user
@@ -29,6 +30,7 @@ services:
       - givegetgo-redis
 
   givegetgo-verification-backend:
+    image: ghcr.io/givegetgo/givegetgo-backend/givegetgo-verification-backend:latest
     container_name: givegetgo-verification-backend
     build:
       context: ./servers/verification
@@ -42,6 +44,7 @@ services:
       - givegetgo-redis
 
   givegetgo-post-backend:
+    image: ghcr.io/givegetgo/givegetgo-backend/givegetgo-post-backend:latest
     container_name: givegetgo-post-backend
     build:
       context: ./servers/post
@@ -55,6 +58,7 @@ services:
       - givegetgo-redis
 
   givegetgo-bid-backend:
+    image: ghcr.io/givegetgo/givegetgo-backend/givegetgo-bid-backend:latest
     container_name: givegetgo-bid-backend
     build:
       context: ./servers/bid
@@ -68,6 +72,7 @@ services:
       - givegetgo-redis
   
   givegetgo-match-backend:
+    image: ghcr.io/givegetgo/givegetgo-backend/givegetgo-match-backend:latest
     container_name: givegetgo-match-backend
     build:
       context: ./servers/match
@@ -81,6 +86,7 @@ services:
       - givegetgo-redis
     
   givegetgo-notification-backend:
+    image: ghcr.io/givegetgo/givegetgo-backend/givegetgo-notification-backend:latest
     container_name: givegetgo-notification-backend
     build:
       context: ./servers/notification
