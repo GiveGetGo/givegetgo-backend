@@ -70,6 +70,16 @@ git clone https://github.com/GiveGetGo/givegetgo-backend.git
 
 ### Create all the env files in each service and redis
 
+For email verification to work, need to change the sendgrid API key.
+
+### run all
+
+to generate default .env files and run `docker compose up -d --build` run:
+
+```bash
+make
+```
+
 ### run docker
 
 ```bash
